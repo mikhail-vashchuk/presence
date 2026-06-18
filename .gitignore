@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# IDE and operating system files
+.idea/
+.DS_Store
