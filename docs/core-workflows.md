@@ -9,14 +9,16 @@ This document describes the state-changing operations supported by the Mirror Pr
 
 ## Opening a Moment
 
-1. A Human opens a Moment with a Gesture and a media stream.
+1. A Human opens a video Moment with a Gesture.
 2. The system creates the Moment with the `active` status.
 3. An active Presence is created for the Human with the `author` role.
 
 ## Sending a Response
 
-1. A Human sends Words in response to another Human’s active Moment.
-2. The system creates a Response with the `pending` status.
+1. A Human submits Words in response to another Human’s active Moment.
+2. The system verifies that the Human has no other Response with the `pending` status.
+3. If no pending Response exists, the system creates a Response with the `pending` status.
+4. If a pending Response already exists, the new Response is not created.
 
 ## Reviewing a Response
 
@@ -40,9 +42,10 @@ This document describes the state-changing operations supported by the Mirror Pr
 1. The author ends their active Moment.
 2. The system records the ending time and changes the Moment status to `completed`.
 3. All active Presences associated with the Moment are completed and receive a leaving time.
-4. The completed Moment no longer accepts new Responses.
+4. All pending Responses associated with the Moment are changed to `expired`.
+5. The completed Moment no longer accepts new Responses.
 
 ## Forming Memory
 
-1. When a Human opens a Moment or submits a Response, the system creates a Memory record containing a snapshot of the Moment’s Gesture or the Response’s Words.
+1. When a Human opens a Moment or successfully submits a Response, the system creates a Memory record containing a snapshot of the Moment’s Gesture or the Response’s Words.
 2. The record remains linked to the Human and the Moment regardless of the later status of the Response.

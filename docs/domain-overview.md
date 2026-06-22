@@ -30,7 +30,7 @@ Each Moment contains a Gesture — its only written form — which gives the Mom
 
 ### Response
 
-A Response is a Human’s reply to another Human’s Moment.
+A Response is a Human’s reply to another Human’s Moment. Its Words express how the Human approaches the Moment. A Human may have no more than one Response with the `pending` status at a time. If the author accepts the Response, the responding Human may enter the Moment as a participant.
 
 Its Words express how the Human approaches the Moment. If the author accepts the Response, the responding Human may enter the Moment as a participant.
 
