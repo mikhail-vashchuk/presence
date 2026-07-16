@@ -14,31 +14,39 @@ class Human(models.Model):
         return self.name
 
 
-class Moment(models.Model):
+class Invitation(models.Model):
     class Status(models.TextChoices):
-        ACTIVE = "active", "Active"
-        COMPLETED = "completed", "Completed"
+        OPEN = "open", "Open"
+        MATCHED = "matched", "Matched"
+        CLOSED = "closed", "Closed"
 
     human = models.ForeignKey(
         Human,
         on_delete=models.PROTECT,
-        related_name="moments",
+        related_name="invitations",
     )
     gesture = models.TextField()
-    media_stream = models.CharField(
-        max_length=255,
-        blank=True,
-    )
     created_at = models.DateTimeField(auto_now_add=True)
-    ended_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=10,
         choices=Status.choices,
-        default=Status.ACTIVE,
+        default=Status.OPEN,
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["human"],
+                condition=models.Q(status="open"),
+                name="unique_open_invitation_per_human",
+            )
+        ]
+
     def __str__(self):
-        return f"Moment #{self.pk} by {self.human}: {self.gesture[:40]}"
+        return (
+            f"Invitation #{self.pk} by {self.human}: "
+            f"{self.gesture[:40]}"
+        )
 
 
 class Response(models.Model):
@@ -46,7 +54,7 @@ class Response(models.Model):
         PENDING = "pending", "Pending"
         ACCEPTED = "accepted", "Accepted"
         REJECTED = "rejected", "Rejected"
-        CANCELED = "cancelled", "Cancelled"
+        CANCELLED = "cancelled", "Cancelled"
         EXPIRED = "expired", "Expired"
 
     human = models.ForeignKey(
@@ -54,8 +62,8 @@ class Response(models.Model):
         on_delete=models.PROTECT,
         related_name="responses",
     )
-    moment = models.ForeignKey(
-        Moment,
+    invitation = models.ForeignKey(
+        Invitation,
         on_delete=models.PROTECT,
         related_name="responses",
     )
@@ -67,15 +75,63 @@ class Response(models.Model):
         default=Status.PENDING,
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["human"],
+                condition=models.Q(status="pending"),
+                name="unique_pending_response_per_human",
+            ),
+        ]
+
     def __str__(self):
         return f"Response #{self.pk} by {self.human}: {self.words[:40]}"
 
 
-class Presence(models.Model):
-    class Role(models.TextChoices):
-        AUTHOR = "author", "Author"
-        PARTICIPANT = "participant", "Participant"
+class Moment(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        COMPLETED = "completed", "Completed"
 
+    accepted_response = models.OneToOneField(
+        Response,
+        on_delete=models.PROTECT,
+        related_name="moment",
+    )
+    media_room_id = models.CharField(
+        max_length=255,
+        unique=True,
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status="active", ended_at__isnull=True)
+                    | models.Q(status="completed", ended_at__isnull=False)
+                ),
+                name="moment_status_matches_ended_at"
+            )
+        ]
+
+    def __str__(self):
+        responder = self.accepted_response.human
+        inviter = self.accepted_response.invitation.human
+
+        return (
+            f"Moment #{self.pk} grown from "
+            f"{responder} response to {inviter} invitation"
+        )
+
+
+class Presence(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "active", "Active"
         COMPLETED = "completed", "Completed"
@@ -90,10 +146,6 @@ class Presence(models.Model):
         on_delete=models.PROTECT,
         related_name="presences",
     )
-    role = models.CharField(
-        max_length=12,
-        choices=Role.choices,
-    )
     joined_at = models.DateTimeField(auto_now_add=True)
     left_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
@@ -102,31 +154,25 @@ class Presence(models.Model):
         default=Status.ACTIVE,
     )
 
-    def __str__(self):
-        return f"{self.human} as {self.role} in Moment #{self.moment_id}"
-
-
-class Memory(models.Model):
-    class SourceType(models.TextChoices):
-        GESTURE = "gesture", "Gesture"
-        RESPONSE = "response", "Response"
-
-    human = models.ForeignKey(
-        Human,
-        on_delete=models.PROTECT,
-        related_name="memories",
-    )
-    moment = models.ForeignKey(
-        Moment,
-        on_delete=models.PROTECT,
-        related_name="memories",
-    )
-    source_type = models.CharField(
-        max_length=10,
-        choices=SourceType.choices,
-    )
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["moment", "human"],
+                name="unique_presence_per_moment_and_human",
+            ),
+            models.UniqueConstraint(
+                fields=["human"],
+                condition=models.Q(status="active"),
+                name="unique_active_presence_per_human",
+            ),
+            models.CheckConstraint(
+                condition=(
+                        models.Q(status="active", left_at__isnull=True)
+                        | models.Q(status="completed", left_at__isnull=False)
+                ),
+                name="presence_status_matches_left_at"
+            )
+        ]
 
     def __str__(self):
-        return f"Memory #{self.pk} from {self.human}: {self.content[:40]}"
+        return f"{self.human} in Moment #{self.moment.pk}"
