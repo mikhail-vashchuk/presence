@@ -1,17 +1,4 @@
-from django.conf import settings
 from django.db import models
-
-
-class Human(models.Model):
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="human",
-    )
-    name = models.CharField(max_length=100)
-
-    def __str__(self):
-        return self.name
 
 
 class Invitation(models.Model):
@@ -21,7 +8,7 @@ class Invitation(models.Model):
         CLOSED = "closed", "Closed"
 
     human = models.ForeignKey(
-        Human,
+        "humans.Human",
         on_delete=models.PROTECT,
         related_name="invitations",
     )
@@ -55,10 +42,10 @@ class Response(models.Model):
         ACCEPTED = "accepted", "Accepted"
         REJECTED = "rejected", "Rejected"
         CANCELLED = "cancelled", "Cancelled"
-        EXPIRED = "expired", "Expired"
+        CLOSED = "closed", "Closed"
 
     human = models.ForeignKey(
-        Human,
+        "humans.Human",
         on_delete=models.PROTECT,
         related_name="responses",
     )
@@ -89,10 +76,6 @@ class Response(models.Model):
 
 
 class Moment(models.Model):
-    class Status(models.TextChoices):
-        ACTIVE = "active", "Active"
-        COMPLETED = "completed", "Completed"
-
     accepted_response = models.OneToOneField(
         Response,
         on_delete=models.PROTECT,
@@ -104,22 +87,6 @@ class Moment(models.Model):
     )
     started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(
-        max_length=10,
-        choices=Status.choices,
-        default=Status.ACTIVE,
-    )
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                condition=(
-                    models.Q(status="active", ended_at__isnull=True)
-                    | models.Q(status="completed", ended_at__isnull=False)
-                ),
-                name="moment_status_matches_ended_at"
-            )
-        ]
 
     def __str__(self):
         responder = self.accepted_response.human
@@ -132,26 +99,15 @@ class Moment(models.Model):
 
 
 class Presence(models.Model):
-    class Status(models.TextChoices):
-        ACTIVE = "active", "Active"
-        COMPLETED = "completed", "Completed"
-
     moment = models.ForeignKey(
         Moment,
         on_delete=models.PROTECT,
         related_name="presences",
     )
     human = models.ForeignKey(
-        Human,
+        "humans.Human",
         on_delete=models.PROTECT,
         related_name="presences",
-    )
-    joined_at = models.DateTimeField(auto_now_add=True)
-    left_at = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(
-        max_length=10,
-        choices=Status.choices,
-        default=Status.ACTIVE,
     )
 
     class Meta:
@@ -159,18 +115,6 @@ class Presence(models.Model):
             models.UniqueConstraint(
                 fields=["moment", "human"],
                 name="unique_presence_per_moment_and_human",
-            ),
-            models.UniqueConstraint(
-                fields=["human"],
-                condition=models.Q(status="active"),
-                name="unique_active_presence_per_human",
-            ),
-            models.CheckConstraint(
-                condition=(
-                        models.Q(status="active", left_at__isnull=True)
-                        | models.Q(status="completed", left_at__isnull=False)
-                ),
-                name="presence_status_matches_left_at"
             )
         ]
 
