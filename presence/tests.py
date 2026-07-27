@@ -514,6 +514,77 @@ class AcceptResponseTests(TestCase):
         self.assertEqual(Moment.objects.count(), 0)
         self.assertEqual(Presence.objects.count(), 0)
 
+    def test_stale_pending_response_cannot_be_accepted(self):
+        invitation = create_invitation(
+            human=self.inviter,
+            gesture="Invitation",
+        )
+
+        response = send_response(
+            human=self.responder,
+            invitation=invitation,
+            words="Response",
+        )
+
+        Response.objects.filter(pk=response.pk).update(
+            status=Response.Status.CLOSED,
+        )
+
+        self.assertEqual(
+            response.status,
+            Response.Status.PENDING,
+        )
+
+        with self.assertRaises(ValueError):
+            accept_response(
+                human=self.inviter,
+                response=response,
+            )
+
+        invitation.refresh_from_db()
+        response.refresh_from_db()
+
+        self.assertEqual(
+            invitation.status,
+            Invitation.Status.OPEN,
+        )
+        self.assertEqual(
+            response.status,
+            Response.Status.CLOSED,
+        )
+        self.assertEqual(Moment.objects.count(), 0)
+        self.assertEqual(Presence.objects.count(), 0)
+
+    def test_only_response_to_an_open_invitation_can_be_accepted(self):
+        invitation = Invitation.objects.create(
+            human=self.inviter,
+            gesture="Invitation",
+            status=Invitation.Status.OPEN,
+        )
+        response = send_response(
+            human=self.responder,
+            invitation=invitation,
+            words="Response",
+        )
+
+        invitation.status = Invitation.Status.CLOSED
+        invitation.save(update_fields=["status"])
+
+        with self.assertRaises(ValueError):
+            accept_response(
+                human=self.inviter,
+                response=response,
+            )
+
+        response.refresh_from_db()
+
+        self.assertEqual(
+            response.status,
+            Response.Status.PENDING,
+        )
+        self.assertEqual(Moment.objects.count(), 0)
+        self.assertEqual(Presence.objects.count(), 0)
+
     def test_non_owner_cannot_accept_response(self):
         invitation = create_invitation(
             human=self.inviter,

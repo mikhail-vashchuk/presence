@@ -69,6 +69,11 @@ class Response(models.Model):
                 condition=models.Q(status="pending"),
                 name="unique_pending_response_per_human",
             ),
+            models.UniqueConstraint(
+                fields=["invitation"],
+                condition=models.Q(status="accepted"),
+                name="unique_accepted_response_per_invitation",
+            )
         ]
 
     def __str__(self):

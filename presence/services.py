@@ -73,10 +73,17 @@ def reject_response(*, human, response):
 
 @transaction.atomic
 def accept_response(*, human, response):
+    invitation = Invitation.objects.select_for_update().get(
+        pk=response.invitation_id
+    )
+
+    response = Response.objects.get(pk=response.pk)
+
     if response.status != Response.Status.PENDING:
         raise ValueError("Response is not pending.")
 
-    invitation = response.invitation
+    if invitation.status != Invitation.Status.OPEN:
+        raise ValueError("Invitation is not open.")
 
     if invitation.human_id != human.pk:
         raise ValueError(
