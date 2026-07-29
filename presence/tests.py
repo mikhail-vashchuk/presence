@@ -16,7 +16,6 @@ class CreateInvitationTests(TestCase):
             first_name="Primary",
             last_name="Human",
             email="primary-human@example.com",
-            password="test-password",
         )
 
     def test_create_invitation(self):
@@ -55,7 +54,6 @@ class CreateInvitationTests(TestCase):
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
-            password="test-password",
         )
 
         invitation = Invitation.objects.create(
@@ -97,7 +95,6 @@ class CreateInvitationTests(TestCase):
             first_name="Another",
             last_name="Inviter",
             email="another-inviter@example.com",
-            password="test-password",
         )
 
         invitation = Invitation.objects.create(
@@ -129,14 +126,12 @@ class SendResponseTests(TestCase):
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
-            password="test-password",
         )
 
         self.responder = register_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
-            password="test-password",
         )
 
     def test_send_response(self):
@@ -283,7 +278,6 @@ class SendResponseTests(TestCase):
             first_name="Another",
             last_name="Inviter",
             email="another-inviter@example.com",
-            password="test-password",
         )
 
         another_invitation = create_invitation(
@@ -319,7 +313,6 @@ class SendResponseTests(TestCase):
             first_name="Another",
             last_name="Inviter",
             email="another-inviter@example.com",
-            password="test-password",
         )
 
         another_invitation = create_invitation(
@@ -346,14 +339,12 @@ class RejectResponseTests(TestCase):
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
-            password="test-password",
         )
 
         self.responder = register_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
-            password="test-password",
         )
 
     def test_reject_response(self):
@@ -458,7 +449,6 @@ class RejectResponseTests(TestCase):
             first_name="Another",
             last_name="Human",
             email="another-human@example.com",
-            password="test-password",
         )
 
         with self.assertRaises(ValueError):
@@ -481,14 +471,12 @@ class AcceptResponseTests(TestCase):
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
-            password="test-password",
         )
 
         self.responder = register_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
-            password="test-password",
         )
 
     def test_accept_response(self):
@@ -507,7 +495,6 @@ class AcceptResponseTests(TestCase):
             first_name="Another",
             last_name="Responder",
             email="another-responder@example.com",
-            password="test-password",
         )
 
         another_response = send_response(
@@ -672,7 +659,6 @@ class AcceptResponseTests(TestCase):
             first_name="Another",
             last_name="Human",
             email="another-human@example.com",
-            password="test-password",
         )
 
         with self.assertRaises(ValueError):
@@ -702,13 +688,11 @@ class CompleteMomentTests(TestCase):
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
-            password="test-password",
         )
         self.responder = register_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
-            password="test-password",
         )
         self.invitation = create_invitation(
             human=self.inviter,
@@ -774,7 +758,6 @@ class CompleteMomentTests(TestCase):
             first_name="Another",
             last_name="Human",
             email="another-human@example.com",
-            password="test-password",
         )
 
         with self.assertRaises(ValueError):
@@ -794,13 +777,11 @@ class CloseInvitationTests(TestCase):
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
-            password="test-password",
         )
         self.responder = register_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
-            password="test-password",
         )
         self.invitation = create_invitation(
             human=self.inviter,
@@ -818,7 +799,6 @@ class CloseInvitationTests(TestCase):
             first_name="Another",
             last_name="Human",
             email="another@example.com",
-            password="test-password",
         )
 
         another_response = send_response(
@@ -910,14 +890,12 @@ class CancelResponseTests(TestCase):
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
-            password="test-password",
         )
 
         self.responder = register_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
-            password="test-password",
         )
 
         self.invitation = create_invitation(
