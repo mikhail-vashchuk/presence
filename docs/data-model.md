@@ -6,9 +6,14 @@ This document describes the entities of the Mirror Presence Layer, their fields,
 
 ### User
 
-The project uses Django’s configured authentication User model. Its fields and authentication behavior are managed by Django.
+`User` is the configured Django authentication model. The table below lists the fields relevant to the Presence Layer rather than every field inherited from Django's authentication system.
 
-The Presence Layer relates each User to one Human through a one-to-one relationship.
+| Field        | Description                           |
+|--------------|---------------------------------------|
+| `user_id`    | Unique identifier of the User.        |
+| `email`      | Unique email used for authentication. |
+| `first_name` | First name of the User.               |
+| `last_name`  | Last name of the User.                |
 
 ### Human
 
@@ -16,7 +21,6 @@ The Presence Layer relates each User to one Human through a one-to-one relations
 |------------|-------------------------------------------------------------------------------|
 | `human_id` | Unique identifier of the Human.                                               |
 | `user_id`  | Identifier of the associated User. Each User can be linked to only one Human. |
-| `name`     | Name of the Human within Mirror.                                              |
 
 ### Invitation
 
@@ -30,14 +34,14 @@ The Presence Layer relates each User to one Human through a one-to-one relations
 
 ### Response
 
-| Field           | Description                                                                    |
-|-----------------|--------------------------------------------------------------------------------|
-| `response_id`   | Unique identifier of the Response.                                             |
-| `invitation_id` | Invitation to which the Response belongs.                                      |
-| `human_id`      | Human who created the Response.                                                |
-| `words`         | Words written in the Response.                                                 |
-| `created_at`    | Date and time when the Response was created.                                   |
-| `status`        | Response status: `pending`, `accepted`, `rejected`, `cancelled`, or `expired`. |
+| Field           | Description                                                                   |
+|-----------------|-------------------------------------------------------------------------------|
+| `response_id`   | Unique identifier of the Response.                                            |
+| `invitation_id` | Invitation to which the Response belongs.                                     |
+| `human_id`      | Human who created the Response.                                               |
+| `words`         | Words written in the Response.                                                |
+| `created_at`    | Date and time when the Response was created.                                  |
+| `status`        | Response status: `pending`, `accepted`, `rejected`, `cancelled`, or `closed`. |
 
 ### Moment
 
@@ -48,7 +52,6 @@ The Presence Layer relates each User to one Human through a one-to-one relations
 | `media_room_id`        | Identifier of the private media room.                    |
 | `started_at`           | Date and time when the Moment started.                   |
 | `ended_at`             | Date and time when the Moment ended. Empty while active. |
-| `status`               | Moment status: `active` or `completed`.                  |
 
 ### Presence
 
@@ -57,9 +60,6 @@ The Presence Layer relates each User to one Human through a one-to-one relations
 | `presence_id` | Unique identifier of the Presence record.                         |
 | `moment_id`   | Moment in which the Human participates.                           |
 | `human_id`    | Participating Human.                                              |
-| `joined_at`   | Date and time when the Human joined the Moment.                   |
-| `left_at`     | Date and time when the Human left the Moment. Empty while active. |
-| `status`      | Presence status: `active` or `completed`.                         |               |
 
 ## Relationships
 
@@ -72,3 +72,17 @@ The Presence Layer relates each User to one Human through a one-to-one relations
 | Response — Moment     | One-to-one  | An accepted Response creates one Moment.      |
 | Moment — Presence     | One-to-many | A Moment contains Presence records.           |
 | Human — Presence      | One-to-many | A Human may participate in multiple Moments.  |
+
+## Domain Constraints
+
+- A Human may have at most one open Invitation.
+- A Human may have at most one pending Response.
+- A Human may not respond to their own Invitation.
+- A Human participating in an active Moment may not create an Invitation or send a Response.
+- An Invitation may have at most one accepted Response.
+- Each Response may create at most one Moment.
+- Each Human may have at most one Presence record within the same Moment.
+- Only the author of an Invitation may accept or reject its Responses.
+- Only the author of an Invitation may close it.
+- Only the author of a Response may cancel it.
+- Only a participant of an active Moment may complete it.
