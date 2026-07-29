@@ -27,7 +27,12 @@ def create_invitation(*, human, gesture):
         gesture=gesture,
     )
 
+@transaction.atomic
 def send_response(*, human, invitation, words):
+    invitation = Invitation.objects.select_for_update().get(
+        pk=invitation.pk
+    )
+
     if invitation.status != Invitation.Status.OPEN:
         raise ValueError("Invitation is not open.")
 
@@ -57,7 +62,10 @@ def send_response(*, human, invitation, words):
         words=words,
     )
 
+@transaction.atomic
 def reject_response(*, human, response):
+    response = Response.objects.select_for_update().get(pk=response.pk)
+
     if response.status != Response.Status.PENDING:
         raise ValueError("Response is not pending.")
 
@@ -73,11 +81,9 @@ def reject_response(*, human, response):
 
 @transaction.atomic
 def accept_response(*, human, response):
-    invitation = Invitation.objects.select_for_update().get(
-        pk=response.invitation_id
-    )
+    invitation = Invitation.objects.select_for_update().get(pk=response.invitation_id)
 
-    response = Response.objects.get(pk=response.pk)
+    response = Response.objects.select_for_update().get(pk=response.pk)
 
     if response.status != Response.Status.PENDING:
         raise ValueError("Response is not pending.")
@@ -122,7 +128,10 @@ def accept_response(*, human, response):
 
     return moment
 
+@transaction.atomic
 def complete_moment(*, human, moment):
+    moment = Moment.objects.select_for_update().get(pk=moment.pk)
+
     if moment.ended_at is not None:
         raise ValueError("Moment is already completed.")
 
@@ -136,6 +145,8 @@ def complete_moment(*, human, moment):
 
 @transaction.atomic
 def close_invitation(*, human, invitation):
+    invitation = Invitation.objects.select_for_update().get(pk=invitation.pk)
+
     if invitation.status != Invitation.Status.OPEN:
         raise ValueError("Invitation is not open.")
 
@@ -154,7 +165,10 @@ def close_invitation(*, human, invitation):
 
     return invitation
 
+@transaction.atomic
 def cancel_response(*, human, response):
+    response = Response.objects.select_for_update().get(pk=response.pk)
+
     if response.status != Response.Status.PENDING:
         raise ValueError("Only pending responses can be cancelled.")
 

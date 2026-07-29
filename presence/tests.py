@@ -32,7 +32,7 @@ class CreateInvitationTests(TestCase):
             Invitation.Status.OPEN,
         )
 
-    def test_human_with_open_invitation_is_rejected(self):
+    def test_create_invitation_raises_when_human_has_open_invitation(self):
         Invitation.objects.create(
             human=self.human,
             gesture="First invitation",
@@ -50,7 +50,7 @@ class CreateInvitationTests(TestCase):
             1,
         )
 
-    def test_human_participating_in_an_active_moment_is_rejected(self):
+    def test_create_invitation_raises_when_human_has_active_moment(self):
         responder = register_human(
             first_name="Responder",
             last_name="Human",
@@ -92,7 +92,7 @@ class CreateInvitationTests(TestCase):
             1,
         )
 
-    def test_human_with_pending_response_is_rejected(self):
+    def test_create_invitation_raises_when_human_has_pending_response(self):
         another_inviter = register_human(
             first_name="Another",
             last_name="Inviter",
@@ -160,7 +160,7 @@ class SendResponseTests(TestCase):
             Response.Status.PENDING,
         )
 
-    def test_closed_invitation_rejects_response(self):
+    def test_send_response_raises_when_invitation_is_closed(self):
         invitation = Invitation.objects.create(
             human=self.inviter,
             gesture="Invitation",
@@ -179,7 +179,7 @@ class SendResponseTests(TestCase):
             0,
         )
 
-    def test_send_response_to_own_invitation_is_rejected(self):
+    def test_send_response_raises_when_invitation_belongs_to_responder(self):
         own_invitation = create_invitation(
             human=self.responder,
             gesture="Own invitation",
@@ -197,7 +197,7 @@ class SendResponseTests(TestCase):
             0,
         )
 
-    def test_responder_with_open_invitation_is_rejected(self):
+    def test_send_response_raises_when_responder_has_open_invitation(self):
         create_invitation(
             human=self.responder,
             gesture="Responders own invitation",
@@ -220,7 +220,42 @@ class SendResponseTests(TestCase):
             0,
         )
 
-    def test_human_participating_in_an_active_moment_is_rejected(self):
+    def test_send_response_uses_database_state_when_invitation_instance_is_stale(self):
+        invitation = create_invitation(
+            human=self.inviter,
+            gesture="Invitation",
+        )
+
+        Invitation.objects.filter(
+            pk=invitation.pk,
+        ).update(
+            status=Invitation.Status.CLOSED,
+        )
+
+        self.assertEqual(
+            invitation.status,
+            Invitation.Status.OPEN,
+        )
+
+        with self.assertRaises(ValueError):
+            send_response(
+                human=self.responder,
+                invitation=invitation,
+                words="Response",
+            )
+
+        invitation.refresh_from_db()
+
+        self.assertEqual(
+            invitation.status,
+            Invitation.Status.CLOSED,
+        )
+        self.assertEqual(
+            Response.objects.count(),
+            0,
+        )
+
+    def test_send_response_raises_when_responder_has_active_moment(self):
         matched_invitation = Invitation.objects.create(
             human=self.inviter,
             gesture="Matched invitation",
@@ -268,7 +303,7 @@ class SendResponseTests(TestCase):
             1,
         )
 
-    def test_responder_with_pending_response_is_rejected(self):
+    def test_send_response_raises_when_responder_has_pending_response(self):
         invitation = create_invitation(
             human=self.inviter,
             gesture="First invitation",
@@ -345,7 +380,7 @@ class RejectResponseTests(TestCase):
             Response.Status.REJECTED,
         )
 
-    def test_non_pending_response_cannot_be_rejected(self):
+    def test_reject_response_raises_when_response_is_not_pending(self):
         invitation = create_invitation(
             human=self.inviter,
             gesture="Invitation",
@@ -371,7 +406,43 @@ class RejectResponseTests(TestCase):
             Response.Status.CANCELLED,
         )
 
-    def test_non_owner_cannot_reject_response(self):
+    def test_reject_response_uses_database_state_when_response_instance_is_stale(self):
+        invitation = create_invitation(
+            human=self.inviter,
+            gesture="Invitation",
+        )
+
+        response = send_response(
+            human=self.responder,
+            invitation=invitation,
+            words="Response",
+        )
+
+        Response.objects.filter(
+            pk=response.pk,
+        ).update(
+            status=Response.Status.ACCEPTED,
+        )
+
+        self.assertEqual(
+            response.status,
+            Response.Status.PENDING,
+        )
+
+        with self.assertRaises(ValueError):
+            reject_response(
+                human=self.inviter,
+                response=response,
+            )
+
+        response.refresh_from_db()
+
+        self.assertEqual(
+            response.status,
+            Response.Status.ACCEPTED,
+        )
+
+    def test_reject_response_raises_when_human_is_not_invitation_owner(self):
         invitation = create_invitation(
             human=self.inviter,
             gesture="Invitation",
@@ -481,7 +552,7 @@ class AcceptResponseTests(TestCase):
             },
         )
 
-    def test_non_pending_response_cannot_be_accepted(self):
+    def test_accept_response_raises_when_response_is_not_pending(self):
         invitation = create_invitation(
             human=self.inviter,
             gesture="Invitation",
@@ -514,7 +585,7 @@ class AcceptResponseTests(TestCase):
         self.assertEqual(Moment.objects.count(), 0)
         self.assertEqual(Presence.objects.count(), 0)
 
-    def test_stale_pending_response_cannot_be_accepted(self):
+    def test_accept_response_uses_database_state_when_response_instance_is_stale(self):
         invitation = create_invitation(
             human=self.inviter,
             gesture="Invitation",
@@ -555,7 +626,7 @@ class AcceptResponseTests(TestCase):
         self.assertEqual(Moment.objects.count(), 0)
         self.assertEqual(Presence.objects.count(), 0)
 
-    def test_only_response_to_an_open_invitation_can_be_accepted(self):
+    def test_accept_response_raises_when_invitation_is_not_open(self):
         invitation = Invitation.objects.create(
             human=self.inviter,
             gesture="Invitation",
@@ -585,7 +656,7 @@ class AcceptResponseTests(TestCase):
         self.assertEqual(Moment.objects.count(), 0)
         self.assertEqual(Presence.objects.count(), 0)
 
-    def test_non_owner_cannot_accept_response(self):
+    def test_accept_response_raises_when_human_is_not_invitation_owner(self):
         invitation = create_invitation(
             human=self.inviter,
             gesture="Invitation",
@@ -663,7 +734,7 @@ class CompleteMomentTests(TestCase):
 
         self.assertIsNotNone(self.moment.ended_at)
 
-    def test_completed_moment_cannot_be_completed_again(self):
+    def test_complete_moment_raises_when_moment_is_already_completed(self):
         original_ended_at_time = timezone.now()
 
         self.moment.ended_at = original_ended_at_time
@@ -679,7 +750,26 @@ class CompleteMomentTests(TestCase):
 
         self.assertEqual(self.moment.ended_at, original_ended_at_time)
 
-    def test_non_participant_cannot_complete_moment(self):
+    def test_complete_moment_uses_database_state_when_moment_instance_is_stale(self):
+        original_ended_at_time = timezone.now()
+
+        Moment.objects.filter(pk=self.moment.pk).update(
+            ended_at=original_ended_at_time,
+        )
+
+        self.assertIsNone(self.moment.ended_at)
+
+        with self.assertRaises(ValueError):
+            complete_moment(
+                human=self.inviter,
+                moment=self.moment,
+            )
+
+        self.moment.refresh_from_db()
+
+        self.assertEqual(self.moment.ended_at, original_ended_at_time)
+
+    def test_complete_moment_raises_when_human_is_not_participant(self):
         another_human = register_human(
             first_name="Another",
             last_name="Human",
@@ -759,7 +849,7 @@ class CloseInvitationTests(TestCase):
             Response.Status.CLOSED
         )
 
-    def test_non_open_invitation_cannot_be_closed(self):
+    def test_close_invitation_raises_when_invitation_is_not_open(self):
         self.invitation.status = Invitation.Status.MATCHED
         self.invitation.save(update_fields=["status"])
 
@@ -776,7 +866,30 @@ class CloseInvitationTests(TestCase):
             Invitation.Status.MATCHED
         )
 
-    def test_non_author_cannot_close_invitation(self):
+    def test_close_invitation_uses_database_state_when_invitation_instance_is_stale(self):
+        Invitation.objects.filter(pk=self.invitation.pk).update(
+            status=Invitation.Status.CLOSED
+        )
+
+        self.assertEqual(
+            self.invitation.status,
+            Invitation.Status.OPEN
+        )
+
+        with self.assertRaises(ValueError):
+            close_invitation(
+                human=self.inviter,
+                invitation=self.invitation,
+            )
+
+        self.invitation.refresh_from_db()
+
+        self.assertEqual(
+            self.invitation.status,
+            Invitation.Status.CLOSED
+        )
+
+    def test_close_invitation_raises_when_human_is_not_invitation_owner(self):
         with self.assertRaises(ValueError):
             close_invitation(
                 human=self.responder,
@@ -831,7 +944,7 @@ class CancelResponseTests(TestCase):
             Response.Status.CANCELLED
         )
 
-    def test_non_pending_response_cannot_be_cancelled(self):
+    def test_cancel_response_raises_when_response_is_not_pending(self):
         self.response.status = Response.Status.CLOSED
         self.response.save(update_fields=["status"])
 
@@ -848,7 +961,30 @@ class CancelResponseTests(TestCase):
             Response.Status.CLOSED
         )
 
-    def test_non_author_cannot_cancel_response(self):
+    def test_cancel_response_uses_database_state_when_response_instance_is_stale(self):
+        Response.objects.filter(pk=self.response.pk).update(
+            status=Response.Status.CANCELLED
+        )
+
+        self.assertEqual(
+            self.response.status,
+            Response.Status.PENDING
+        )
+
+        with self.assertRaises(ValueError):
+            cancel_response(
+                human=self.responder,
+                response=self.response,
+            )
+
+        self.response.refresh_from_db()
+
+        self.assertEqual(
+            self.response.status,
+            Response.Status.CANCELLED
+        )
+
+    def test_cancel_response_raises_when_human_is_not_response_author(self):
         with self.assertRaises(ValueError):
             cancel_response(
                 human=self.inviter,
