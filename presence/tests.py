@@ -3,7 +3,7 @@ from uuid import uuid4
 from django.test import TestCase
 from django.utils import timezone
 
-from humans.services import register_human
+from humans.services import create_human
 
 from .models import Invitation, Moment, Presence, Response
 from .services import create_invitation, reject_response, send_response, accept_response, complete_moment, \
@@ -12,7 +12,7 @@ from .services import create_invitation, reject_response, send_response, accept_
 
 class CreateInvitationTests(TestCase):
     def setUp(self):
-        self.human = register_human(
+        self.human = create_human(
             first_name="Primary",
             last_name="Human",
             email="primary-human@example.com",
@@ -50,7 +50,7 @@ class CreateInvitationTests(TestCase):
         )
 
     def test_create_invitation_raises_when_human_has_active_moment(self):
-        responder = register_human(
+        responder = create_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
@@ -91,7 +91,7 @@ class CreateInvitationTests(TestCase):
         )
 
     def test_create_invitation_raises_when_human_has_pending_response(self):
-        another_inviter = register_human(
+        another_inviter = create_human(
             first_name="Another",
             last_name="Inviter",
             email="another-inviter@example.com",
@@ -122,13 +122,13 @@ class CreateInvitationTests(TestCase):
 
 class SendResponseTests(TestCase):
     def setUp(self):
-        self.inviter = register_human(
+        self.inviter = create_human(
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
         )
 
-        self.responder = register_human(
+        self.responder = create_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
@@ -274,7 +274,7 @@ class SendResponseTests(TestCase):
             moment=moment,
         )
 
-        another_inviter = register_human(
+        another_inviter = create_human(
             first_name="Another",
             last_name="Inviter",
             email="another-inviter@example.com",
@@ -309,7 +309,7 @@ class SendResponseTests(TestCase):
             words="Pending response",
         )
 
-        another_inviter = register_human(
+        another_inviter = create_human(
             first_name="Another",
             last_name="Inviter",
             email="another-inviter@example.com",
@@ -335,13 +335,13 @@ class SendResponseTests(TestCase):
 
 class RejectResponseTests(TestCase):
     def setUp(self):
-        self.inviter = register_human(
+        self.inviter = create_human(
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
         )
 
-        self.responder = register_human(
+        self.responder = create_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
@@ -445,7 +445,7 @@ class RejectResponseTests(TestCase):
             words="Response",
         )
 
-        another_human = register_human(
+        another_human = create_human(
             first_name="Another",
             last_name="Human",
             email="another-human@example.com",
@@ -467,13 +467,13 @@ class RejectResponseTests(TestCase):
 
 class AcceptResponseTests(TestCase):
     def setUp(self):
-        self.inviter = register_human(
+        self.inviter = create_human(
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
         )
 
-        self.responder = register_human(
+        self.responder = create_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
@@ -491,7 +491,7 @@ class AcceptResponseTests(TestCase):
             words="Response",
         )
 
-        another_responder = register_human(
+        another_responder = create_human(
             first_name="Another",
             last_name="Responder",
             email="another-responder@example.com",
@@ -655,7 +655,7 @@ class AcceptResponseTests(TestCase):
             words="Response",
         )
 
-        another_human = register_human(
+        another_human = create_human(
             first_name="Another",
             last_name="Human",
             email="another-human@example.com",
@@ -684,12 +684,12 @@ class AcceptResponseTests(TestCase):
 
 class CompleteMomentTests(TestCase):
     def setUp(self):
-        self.inviter = register_human(
+        self.inviter = create_human(
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
         )
-        self.responder = register_human(
+        self.responder = create_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
@@ -754,7 +754,7 @@ class CompleteMomentTests(TestCase):
         self.assertEqual(self.moment.ended_at, original_ended_at_time)
 
     def test_complete_moment_raises_when_human_is_not_participant(self):
-        another_human = register_human(
+        another_human = create_human(
             first_name="Another",
             last_name="Human",
             email="another-human@example.com",
@@ -773,12 +773,12 @@ class CompleteMomentTests(TestCase):
 
 class CloseInvitationTests(TestCase):
     def setUp(self):
-        self.inviter = register_human(
+        self.inviter = create_human(
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
         )
-        self.responder = register_human(
+        self.responder = create_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
@@ -795,7 +795,7 @@ class CloseInvitationTests(TestCase):
             words="Response",
         )
 
-        another_human = register_human(
+        another_human = create_human(
             first_name="Another",
             last_name="Human",
             email="another@example.com",
@@ -886,13 +886,13 @@ class CloseInvitationTests(TestCase):
 
 class CancelResponseTests(TestCase):
     def setUp(self):
-        self.inviter = register_human(
+        self.inviter = create_human(
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
         )
 
-        self.responder = register_human(
+        self.responder = create_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",

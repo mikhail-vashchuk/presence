@@ -91,7 +91,10 @@ class Moment(models.Model):
         unique=True,
     )
     started_at = models.DateTimeField(auto_now_add=True)
-    ended_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
 
     def __str__(self):
         responder = self.accepted_response.human
