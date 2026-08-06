@@ -84,7 +84,7 @@ class VerifyRegistrationCodeTests(TestCase):
 
         verify_registration_code(
             verification_id=verification.pk,
-            users_code="123456",
+            code="123456",
         )
 
         verification.refresh_from_db()
@@ -102,7 +102,7 @@ class VerifyRegistrationCodeTests(TestCase):
         with self.assertRaises(ValidationError):
             verify_registration_code(
                 verification_id=verification.pk,
-                users_code="123456",
+                code="123456",
             )
 
         verification.refresh_from_db()
@@ -118,7 +118,7 @@ class VerifyRegistrationCodeTests(TestCase):
 
         verify_registration_code(
             verification_id=verification.pk,
-            users_code="123456",
+            code="123456",
         )
 
         verification.refresh_from_db()
@@ -128,7 +128,7 @@ class VerifyRegistrationCodeTests(TestCase):
         with self.assertRaises(ValidationError):
             verify_registration_code(
                 verification_id=verification.pk,
-                users_code="123456",
+                code="123456",
             )
 
     def test_verify_registration_code_raises_and_increments_failed_attempts_when_code_is_invalid(self):
@@ -141,7 +141,7 @@ class VerifyRegistrationCodeTests(TestCase):
         with self.assertRaises(ValidationError):
             verify_registration_code(
                 verification_id=verification.pk,
-                users_code="123457",
+                code="123457",
             )
 
         verification.refresh_from_db()
@@ -160,7 +160,7 @@ class VerifyRegistrationCodeTests(TestCase):
         with self.assertRaises(ValidationError):
             verify_registration_code(
                 verification_id=verification.pk,
-                users_code="123456",
+                code="123456",
             )
 
         verification.refresh_from_db()
@@ -186,7 +186,7 @@ class VerifyLoginCodeTests(TestCase):
     def test_verify_login_code_returns_existing_user(self):
         verified_user = verify_login_code(
             verification_id=self.verification.pk,
-            users_code="123456",
+            code="123456",
         )
 
         self.assertEqual(self.user, verified_user)
@@ -198,7 +198,7 @@ class VerifyLoginCodeTests(TestCase):
         with self.assertRaises(ValidationError):
             verify_login_code(
                 verification_id=self.verification.pk,
-                users_code="123456",
+                code="123456",
             )
 
         self.assertEqual(

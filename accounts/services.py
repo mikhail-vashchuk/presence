@@ -44,7 +44,7 @@ def start_login(email):
     return verification
 
 @transaction.atomic
-def _verify_code(*, verification_id, users_code):
+def _verify_code(*, verification_id, code):
     verification = (
         EmailVerification.objects
         .select_for_update()
@@ -60,7 +60,7 @@ def _verify_code(*, verification_id, users_code):
     if verification.failed_attempts >= 3:
         raise ValidationError("Too many failed attempts")
 
-    if not check_password(users_code, verification.code_hash):
+    if not check_password(code, verification.code_hash):
         verification.failed_attempts += 1
         verification.save(update_fields=["failed_attempts"])
 
@@ -71,10 +71,10 @@ def _verify_code(*, verification_id, users_code):
 
     return verification
 
-def verify_login_code(*, verification_id, users_code):
+def verify_login_code(*, verification_id, code):
     verification = _verify_code(
         verification_id=verification_id,
-        users_code=users_code,
+        code=code,
     )
 
     if verification is None:
@@ -95,10 +95,10 @@ def verify_login_code(*, verification_id, users_code):
 
     return user
 
-def verify_registration_code(*, verification_id, users_code):
+def verify_registration_code(*, verification_id, code):
     verification = _verify_code(
         verification_id=verification_id,
-        users_code=users_code,
+        code=code,
     )
 
     if verification is None:

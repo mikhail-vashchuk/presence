@@ -51,7 +51,7 @@ class CompleteRegistrationTests(TestCase):
     def test_complete_registration_creates_user_and_human(self):
         verify_registration_code(
             verification_id=self.verification.pk,
-            users_code="123456"
+            code="123456"
         )
 
         human =  complete_registration(
@@ -84,7 +84,7 @@ class CompleteRegistrationTests(TestCase):
     def test_complete_registration_raises_when_email_is_already_registered(self):
         verify_registration_code(
             verification_id=self.verification.pk,
-            users_code="123456",
+            code="123456",
         )
 
         User.objects.create_user(
