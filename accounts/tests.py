@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import check_password, make_password
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
@@ -30,6 +30,37 @@ class UserManagerTests(TestCase):
             )
 
 
+class CreateEmailVerificationTests(TestCase):
+    def test_create_email_verification(self):
+        before = timezone.now()
+
+        verification, code = create_email_verification(
+            email="human@example.com",
+            purpose=EmailVerification.Purpose.LOGIN,
+        )
+
+        after = timezone.now()
+
+        self.assertEqual(verification.email, "human@example.com")
+        self.assertEqual(
+            verification.purpose,
+            EmailVerification.Purpose.LOGIN,
+        )
+        self.assertTrue(code.isdigit())
+        self.assertEqual(len(code), 6)
+        self.assertTrue(
+            check_password(code, verification.code_hash)
+        )
+        self.assertGreaterEqual(
+            verification.expires_at,
+            before + timedelta(minutes=5),
+        )
+        self.assertLessEqual(
+            verification.expires_at,
+            after + timedelta(minutes=5),
+        )
+
+
 class StartLoginTests(TestCase):
     def test_start_login_creates_email_verification(self):
         User.objects.create_user(
@@ -50,6 +81,104 @@ class StartLoginTests(TestCase):
             start_login(email="human@example.com")
 
         self.assertEqual(EmailVerification.objects.count(), 0)
+
+
+class VerifyEmailVerificationTests(TestCase):
+    def setUp(self):
+        self.verification = EmailVerification.objects.create(
+            email="human@example.com",
+            purpose=EmailVerification.Purpose.LOGIN,
+            code_hash=make_password("123456"),
+            expires_at=timezone.now() + timedelta(minutes=5),
+        )
+
+    def test_verify_email_verification(self):
+        verification = verify_email_verification(
+            verification_id=self.verification.pk,
+            code="123456",
+            purpose=EmailVerification.Purpose.LOGIN,
+        )
+
+        self.assertEqual(verification, self.verification)
+
+        self.verification.refresh_from_db()
+
+        self.assertIsNotNone(
+            self.verification.verified_at,
+        )
+
+    def test_wrong_code_increments_failed_attempts(self):
+        result = verify_email_verification(
+            verification_id=self.verification.pk,
+            code="654321",
+            purpose=EmailVerification.Purpose.LOGIN,
+        )
+
+        self.assertIsNone(result)
+
+        self.verification.refresh_from_db()
+
+        self.assertEqual(
+            self.verification.failed_attempts,
+            1,
+        )
+
+    def test_expired_verification_is_rejected(self):
+        self.verification.expires_at = (
+            timezone.now() - timedelta(seconds=1)
+        )
+        self.verification.save(
+            update_fields=["expires_at"],
+        )
+
+        with self.assertRaises(ValidationError):
+            verify_email_verification(
+                verification_id=self.verification.pk,
+                code="123456",
+                purpose=EmailVerification.Purpose.LOGIN,
+            )
+
+    def test_already_verified_verification_is_rejected(self):
+        self.verification.verified_at = timezone.now()
+        self.verification.save(
+            update_fields=["verified_at"],
+        )
+
+        with self.assertRaises(ValidationError):
+            verify_email_verification(
+                verification_id=self.verification.pk,
+                code="123456",
+                purpose=EmailVerification.Purpose.LOGIN,
+            )
+
+    def test_verification_is_rejected_after_too_many_failed_attempts(self):
+        self.verification.failed_attempts = 3
+        self.verification.save(
+            update_fields=["failed_attempts"],
+        )
+
+        with self.assertRaises(ValidationError):
+            verify_email_verification(
+                verification_id=self.verification.pk,
+                code="123456",
+                purpose=EmailVerification.Purpose.LOGIN,
+            )
+
+    def test_wrong_purpose_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            verify_email_verification(
+                verification_id=self.verification.pk,
+                code="123456",
+                purpose=EmailVerification.Purpose.REGISTRATION,
+            )
+
+    def test_missing_verification_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            verify_email_verification(
+                verification_id=999999,
+                code="123456",
+                purpose=EmailVerification.Purpose.LOGIN,
+            )
 
 
 class VerifyLoginCodeTests(TestCase):
@@ -87,24 +216,3 @@ class VerifyLoginCodeTests(TestCase):
             EmailVerification.objects.count(),
             0,
         )
-
-    def test_verify_login_code_rejects_registration_verification(self):
-        verification = EmailVerification.objects.create(
-            email=self.user.email,
-            purpose=EmailVerification.Purpose.REGISTRATION,
-            code_hash=make_password("123456"),
-            expires_at=timezone.now() + timedelta(minutes=5),
-        )
-
-        with self.assertRaises(ValidationError):
-            verify_login_code(
-                verification_id=verification.pk,
-                code="123456",
-            )
-
-    def test_verify_login_code_raises_when_verification_does_not_exist(self):
-        with self.assertRaises(ValidationError):
-            verify_login_code(
-                verification_id=999999,
-                code="123456",
-            )
