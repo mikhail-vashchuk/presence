@@ -87,3 +87,15 @@ def complete_registration(*, verification_id, first_name, last_name):
     verification.delete()
 
     return human
+
+def get_current_human(*, user_id):
+    try:
+        return (
+            Human.objects
+            .select_related("user")
+            .get(user_id=user_id)
+        )
+    except Human.DoesNotExist as error:
+        raise ValidationError(
+            "Human does not exist"
+        ) from error

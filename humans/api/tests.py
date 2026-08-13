@@ -301,3 +301,62 @@ class CompleteRegistrationAPITests(APITestCase):
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
         )
+
+
+class CurrentHumanAPITests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="human@example.com",
+        )
+
+        self.human = Human.objects.create(
+            user=self.user,
+            first_name="My",
+            last_name="Human",
+        )
+
+    def test_get_current_human(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("humans_api:me"),
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(
+            response.data,
+            {
+                "id": self.human.pk,
+                "first_name": "My",
+                "last_name": "Human",
+                "email": "human@example.com",
+            },
+        )
+
+    def test_get_current_human_requires_authentication(self):
+        response = self.client.get(
+            reverse("humans_api:me"),
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_get_current_human_returns_bad_request_when_user_has_no_human(self):
+        user = User.objects.create_user(
+            email="account@example.com",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            reverse("humans_api:me"),
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )

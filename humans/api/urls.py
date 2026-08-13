@@ -4,6 +4,7 @@ from humans.api.views import (
     CompleteRegistrationView,
     StartRegistrationView,
     VerifyRegistrationCodeView,
+    CurrentHumanView,
 )
 
 
@@ -25,5 +26,10 @@ urlpatterns = [
         "registration/<int:verification_id>/complete/",
         CompleteRegistrationView.as_view(),
         name="registration-complete",
+    ),
+    path(
+        "me/",
+        CurrentHumanView.as_view(),
+        name="me",
     ),
 ]

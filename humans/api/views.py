@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 
 from rest_framework import status
 from rest_framework.exceptions import ValidationError as APIValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -10,11 +11,13 @@ from humans.api.serializers import (
     CompleteRegistrationSerializer,
     EmailSerializer,
     VerificationCodeSerializer,
+    CurrentHumanSerializer,
 )
 from humans.services import (
     complete_registration,
     start_registration,
     verify_registration_code,
+    get_current_human,
 )
 
 
@@ -87,4 +90,25 @@ class CompleteRegistrationView(APIView):
                 "human_id": human.pk,
             },
             status=status.HTTP_201_CREATED,
+        )
+
+
+class CurrentHumanView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            human = get_current_human(
+                user_id=request.user.pk,
+            )
+        except DjangoValidationError as error:
+            raise APIValidationError(
+                {"detail": error.messages}
+            ) from error
+
+        serializer = CurrentHumanSerializer(human)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
         )
