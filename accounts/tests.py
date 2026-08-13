@@ -101,3 +101,10 @@ class VerifyLoginCodeTests(TestCase):
                 verification_id=verification.pk,
                 code="123456",
             )
+
+    def test_verify_login_code_raises_when_verification_does_not_exist(self):
+        with self.assertRaises(ValidationError):
+            verify_login_code(
+                verification_id=999999,
+                code="123456",
+            )

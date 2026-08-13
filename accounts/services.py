@@ -27,11 +27,16 @@ def create_email_verification(*, email, purpose):
 
 @transaction.atomic
 def verify_email_verification(*, verification_id, code, purpose):
-    verification = (
-        EmailVerification.objects
-        .select_for_update()
-        .get(pk=verification_id)
-    )
+    try:
+        verification = (
+            EmailVerification.objects
+            .select_for_update()
+            .get(pk=verification_id)
+        )
+    except EmailVerification.DoesNotExist as error:
+        raise ValidationError(
+            "Verification does not exist"
+        ) from error
 
     if verification.purpose != purpose:
         raise ValidationError(
