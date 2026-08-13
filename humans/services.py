@@ -52,11 +52,16 @@ def create_human(*, first_name, last_name, email):
 
 @transaction.atomic
 def complete_registration(*, verification_id, first_name, last_name):
-    verification = (
-        EmailVerification.objects
-        .select_for_update()
-        .get(pk=verification_id)
-    )
+    try:
+        verification = (
+            EmailVerification.objects
+            .select_for_update()
+            .get(pk=verification_id)
+        )
+    except EmailVerification.DoesNotExist as error:
+        raise ValidationError(
+            "Verification does not exist"
+        ) from error
 
     if verification.purpose != EmailVerification.Purpose.REGISTRATION:
         raise ValidationError(

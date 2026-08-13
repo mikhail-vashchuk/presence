@@ -8,4 +8,8 @@ urlpatterns = [
         "api/auth/",
         include("accounts.api.urls"),
     ),
+    path(
+        "api/humans/",
+        include("humans.api.urls"),
+    ),
 ]
