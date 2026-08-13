@@ -9,13 +9,15 @@ from humans.models import Human
 @transaction.atomic
 def create_human(*, first_name, last_name, email):
     user = User.objects.create_user(
-        first_name=first_name,
-        last_name=last_name,
         email=email,
         password=None,
     )
 
-    return Human.objects.create(user=user)
+    return Human.objects.create(
+        user=user,
+        first_name=first_name,
+        last_name=last_name,
+    )
 
 @transaction.atomic
 def complete_registration(*, verification_id, first_name, last_name):

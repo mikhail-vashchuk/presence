@@ -28,11 +28,11 @@ class CreateHumanTests(TestCase):
             "human@example.com",
         )
         self.assertEqual(
-            human.user.first_name,
+            human.first_name,
             "My",
         )
         self.assertEqual(
-            human.user.last_name,
+            human.last_name,
             "Human",
         )
         self.assertFalse(
@@ -63,8 +63,8 @@ class CompleteRegistrationTests(TestCase):
         self.assertEqual(Human.objects.count(), 1)
         self.assertEqual(User.objects.count(), 1)
         self.assertEqual(human.user.email, "human@example.com")
-        self.assertEqual(human.user.first_name, "My")
-        self.assertEqual(human.user.last_name, "Human")
+        self.assertEqual(human.first_name, "My")
+        self.assertEqual(human.last_name, "Human")
         self.assertEqual(EmailVerification.objects.count(), 0)
 
     def test_complete_registration_raises_when_email_is_not_verified(self):
@@ -88,8 +88,6 @@ class CompleteRegistrationTests(TestCase):
         )
 
         User.objects.create_user(
-            first_name="Existing",
-            last_name="User",
             email="human@example.com",
         )
 

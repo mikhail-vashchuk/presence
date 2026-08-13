@@ -8,12 +8,13 @@ from .managers import UserManager
 
 class User(AbstractUser):
     username = None
+    first_name = None
+    last_name = None
+
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=150, blank=False)
-    last_name = models.CharField(max_length=150, blank=False)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["first_name", "last_name"]
+    REQUIRED_FIELDS = []
 
     objects = UserManager()
 

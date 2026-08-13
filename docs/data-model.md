@@ -6,21 +6,21 @@ This document describes the entities of the Mirror Presence Layer, their fields,
 
 ### User
 
-`User` is the configured Django authentication model. The table below lists the fields relevant to the Presence Layer rather than every field inherited from Django's authentication system.
+`User` is the configured Django authentication model. It represents the technical account used for authentication.
 
-| Field        | Description                           |
-|--------------|---------------------------------------|
-| `user_id`    | Unique identifier of the User.        |
-| `email`      | Unique email used for authentication. |
-| `first_name` | First name of the User.               |
-| `last_name`  | Last name of the User.                |
+| Field     | Meaning                          |
+|-----------|----------------------------------|
+| `user_id` | Unique identifier of the User.   |
+| `email`   | Unique authentication email.     |
 
 ### Human
 
-| Field      | Description                                                                   |
-|------------|-------------------------------------------------------------------------------|
-| `human_id` | Unique identifier of the Human.                                               |
-| `user_id`  | Identifier of the associated User. Each User can be linked to only one Human. |
+| Field        | Description                                                                   |
+|--------------|-------------------------------------------------------------------------------|
+| `human_id`   | Unique identifier of the Human.                                               |
+| `user_id`    | Identifier of the associated User. Each User can be linked to only one Human. |
+| `first_name` | First name of the Human.                                                      |
+| `last_name`  | Last name of the Human.                                                       |
 
 ### Invitation
 

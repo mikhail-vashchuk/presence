@@ -12,8 +12,6 @@ from accounts.services import start_registration, start_login, verify_registrati
 class UserManagerTests(TestCase):
     def test_create_user_without_password_sets_unusable_password(self):
         user = User.objects.create_user(
-            first_name="My",
-            last_name="Human",
             email="human@example.com",
         )
 
@@ -22,12 +20,9 @@ class UserManagerTests(TestCase):
     def test_create_superuser_requires_password(self):
         with self.assertRaises(ValueError):
             User.objects.create_superuser(
-                first_name="Admin",
-                last_name="Human",
                 email="admin@example.com",
                 password=None,
             )
-
 
 class StartRegistrationTests(TestCase):
     def test_start_registration_creates_email_verification(self):
@@ -43,8 +38,6 @@ class StartRegistrationTests(TestCase):
 
     def test_start_registration_raises_when_email_is_already_registered(self):
         User.objects.create_user(
-            first_name="My",
-            last_name="Human",
             email="human@example.com",
         )
 
@@ -57,9 +50,7 @@ class StartRegistrationTests(TestCase):
 class StartLoginTests(TestCase):
     def test_start_login_creates_email_verification(self):
         User.objects.create_user(
-            first_name="My",
-            last_name="Human",
-            email="human@example.com"
+            email="human@example.com",
         )
 
         verification = start_login(email="human@example.com")
@@ -172,9 +163,7 @@ class VerifyRegistrationCodeTests(TestCase):
 class VerifyLoginCodeTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            first_name="My",
-            last_name="Human",
-            email="human@example.com"
+            email="human@example.com",
         )
 
         self.verification = EmailVerification.objects.create(

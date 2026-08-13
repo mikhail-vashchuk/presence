@@ -9,5 +9,11 @@ class Human(models.Model):
         related_name="human",
     )
 
+    first_name = models.CharField(max_length=150)
+    last_name = models.CharField(max_length=150)
+
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
     def __str__(self):
-        return self.user.get_full_name()
+        return self.get_full_name()
