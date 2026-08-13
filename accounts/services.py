@@ -1,55 +1,42 @@
 from datetime import timedelta
 from secrets import randbelow
 
-from django.contrib.auth.hashers import make_password, check_password
+from django.contrib.auth.hashers import check_password, make_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from accounts.models import User, EmailVerification
+from accounts.models import EmailVerification, User
 
 
 VERIFICATION_CODE_LIFETIME = timedelta(minutes=5)
 
 
-def _create_email_verification(email):
+def create_email_verification(*, email, purpose):
     code = f"{randbelow(1_000_000):06d}"
 
     verification = EmailVerification.objects.create(
         email=email,
+        purpose=purpose,
         code_hash=make_password(code),
         expires_at=timezone.now() + VERIFICATION_CODE_LIFETIME,
     )
 
     return verification, code
 
-def start_registration(email):
-    if User.objects.filter(email=email).exists():
-        raise ValidationError("Email already registered")
-
-    verification, code = _create_email_verification(email)
-
-    # TODO: send the verification code through the email provider.
-
-    return verification
-
-def start_login(email):
-    if not User.objects.filter(email=email).exists():
-        raise ValidationError("Email is not registered")
-
-    verification, code = _create_email_verification(email)
-
-    # TODO: send the verification code through the email provider.
-
-    return verification
 
 @transaction.atomic
-def _verify_code(*, verification_id, code):
+def verify_email_verification(*, verification_id, code, purpose):
     verification = (
         EmailVerification.objects
         .select_for_update()
         .get(pk=verification_id)
     )
+
+    if verification.purpose != purpose:
+        raise ValidationError(
+            "Verification purpose does not match"
+        )
 
     if verification.expires_at <= timezone.now():
         raise ValidationError("Code expired")
@@ -71,10 +58,26 @@ def _verify_code(*, verification_id, code):
 
     return verification
 
+
+def start_login(email):
+    if not User.objects.filter(email=email).exists():
+        raise ValidationError("Email is not registered")
+
+    verification, code = create_email_verification(
+        email=email,
+        purpose=EmailVerification.Purpose.LOGIN,
+    )
+
+    # TODO: send the verification code through the email provider.
+
+    return verification
+
+
 def verify_login_code(*, verification_id, code):
-    verification = _verify_code(
+    verification = verify_email_verification(
         verification_id=verification_id,
         code=code,
+        purpose=EmailVerification.Purpose.LOGIN,
     )
 
     if verification is None:
@@ -94,14 +97,3 @@ def verify_login_code(*, verification_id, code):
     verification.delete()
 
     return user
-
-def verify_registration_code(*, verification_id, code):
-    verification = _verify_code(
-        verification_id=verification_id,
-        code=code,
-    )
-
-    if verification is None:
-        raise ValidationError("Invalid verification code")
-
-    return verification
