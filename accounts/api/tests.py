@@ -158,7 +158,7 @@ class VerifyLoginCodeAPITests(APITestCase):
             0,
         )
 
-    def test_verify_login_code_returns_bad_request_when_verification_does_not_exist(self):
+    def test_verify_login_code_returns_not_found_when_verification_does_not_exist(self):
         response = self.client.post(
             reverse(
                 "accounts_api:login-verify",
@@ -174,7 +174,7 @@ class VerifyLoginCodeAPITests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_400_BAD_REQUEST,
+            status.HTTP_404_NOT_FOUND,
         )
 
 

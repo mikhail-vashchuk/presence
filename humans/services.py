@@ -1,17 +1,27 @@
-from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from accounts.exceptions import (
+    InvalidVerificationCode,
+    VerificationNotFound,
+    VerificationPurposeMismatch,
+)
 from accounts.models import EmailVerification, User
 from accounts.services import (
     create_email_verification,
     verify_email_verification,
+)
+
+from humans.exceptions import (
+    EmailAlreadyRegistered,
+    HumanNotFound,
+    RegistrationNotVerified,
 )
 from humans.models import Human
 
 
 def start_registration(email):
     if User.objects.filter(email=email).exists():
-        raise ValidationError("Email already registered")
+        raise EmailAlreadyRegistered
 
     verification, code = create_email_verification(
         email=email,
@@ -31,7 +41,7 @@ def verify_registration_code(*, verification_id, code):
     )
 
     if verification is None:
-        raise ValidationError("Invalid verification code")
+        raise InvalidVerificationCode
 
     return verification
 
@@ -59,24 +69,16 @@ def complete_registration(*, verification_id, first_name, last_name):
             .get(pk=verification_id)
         )
     except EmailVerification.DoesNotExist as error:
-        raise ValidationError(
-            "Verification does not exist"
-        ) from error
+        raise VerificationNotFound from error
 
     if verification.purpose != EmailVerification.Purpose.REGISTRATION:
-        raise ValidationError(
-            "Verification purpose does not match"
-        )
+        raise VerificationPurposeMismatch
 
     if verification.verified_at is None:
-        raise ValidationError(
-            "Email verification is incomplete"
-        )
+        raise RegistrationNotVerified
 
     if User.objects.filter(email=verification.email).exists():
-        raise ValidationError(
-            "User with such email address already exists"
-        )
+        raise EmailAlreadyRegistered
 
     human = create_human(
         first_name=first_name,
@@ -91,11 +93,7 @@ def complete_registration(*, verification_id, first_name, last_name):
 def get_current_human(*, user_id):
     try:
         return (
-            Human.objects
-            .select_related("user")
-            .get(user_id=user_id)
+            Human.objects.select_related("user").get(user_id=user_id)
         )
     except Human.DoesNotExist as error:
-        raise ValidationError(
-            "Human does not exist"
-        ) from error
+        raise HumanNotFound from error

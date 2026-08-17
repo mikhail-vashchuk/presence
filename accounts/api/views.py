@@ -1,8 +1,10 @@
 from django.contrib.auth import login, logout
-from django.core.exceptions import ValidationError as DjangoValidationError
 
 from rest_framework import status
-from rest_framework.exceptions import ValidationError as APIValidationError
+from rest_framework.exceptions import (
+    NotFound,
+    ValidationError as APIValidationError,
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,6 +12,16 @@ from rest_framework.views import APIView
 from accounts.api.serializers import (
     EmailSerializer,
     VerificationCodeSerializer,
+)
+from accounts.exceptions import (
+    EmailNotRegistered,
+    InvalidVerificationCode,
+    VerificationAlreadyUsed,
+    VerificationAttemptsExceeded,
+    VerificationExpired,
+    VerificationNotFound,
+    VerificationPurposeMismatch,
+    VerificationUserNotFound,
 )
 from accounts.services import (
     start_login,
@@ -26,9 +38,11 @@ class StartLoginView(APIView):
             verification = start_login(
                 email=serializer.validated_data["email"],
             )
-        except DjangoValidationError as error:
+        except EmailNotRegistered as error:
             raise APIValidationError(
-                {"detail": error.messages}
+                {
+                    "detail": "Email is not registered",
+                }
             ) from error
 
         return Response(
@@ -51,9 +65,54 @@ class VerifyLoginCodeView(APIView):
                 verification_id=verification_id,
                 code=serializer.validated_data["code"],
             )
-        except DjangoValidationError as error:
+
+        except VerificationNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Verification does not exist",
+                }
+            ) from error
+
+        except VerificationPurposeMismatch as error:
             raise APIValidationError(
-                {"detail": error.messages}
+                {
+                    "detail": "Verification cannot be used for login",
+                }
+            ) from error
+
+        except VerificationExpired as error:
+            raise APIValidationError(
+                {
+                    "detail": "Verification code has expired",
+                }
+            ) from error
+
+        except VerificationAlreadyUsed as error:
+            raise APIValidationError(
+                {
+                    "detail": "Verification has already been used",
+                }
+            ) from error
+
+        except VerificationAttemptsExceeded as error:
+            raise APIValidationError(
+                {
+                    "detail": "Too many failed verification attempts",
+                }
+            ) from error
+
+        except InvalidVerificationCode as error:
+            raise APIValidationError(
+                {
+                    "detail": "Invalid verification code",
+                }
+            ) from error
+
+        except VerificationUserNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "User does not exist",
+                }
             ) from error
 
         login(request, user)

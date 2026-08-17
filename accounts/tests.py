@@ -1,10 +1,19 @@
 from datetime import timedelta
 
 from django.contrib.auth.hashers import check_password, make_password
-from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
+from accounts.exceptions import (
+    EmailNotRegistered,
+    InvalidVerificationCode,
+    VerificationAlreadyUsed,
+    VerificationAttemptsExceeded,
+    VerificationExpired,
+    VerificationNotFound,
+    VerificationPurposeMismatch,
+    VerificationUserNotFound,
+)
 from accounts.models import User, EmailVerification
 from accounts.services import (
     create_email_verification,
@@ -77,7 +86,7 @@ class StartLoginTests(TestCase):
         )
 
     def test_start_login_raises_when_email_is_not_registered(self):
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(EmailNotRegistered):
             start_login(email="human@example.com")
 
         self.assertEqual(EmailVerification.objects.count(), 0)
@@ -107,10 +116,10 @@ class VerifyEmailVerificationTests(TestCase):
             self.verification.verified_at,
         )
 
-    def test_wrong_code_increments_failed_attempts(self):
+    def test_wrong_code_returns_none_and_increments_failed_attempts(self):
         result = verify_email_verification(
             verification_id=self.verification.pk,
-            code="654321",
+            code="123457",
             purpose=EmailVerification.Purpose.LOGIN,
         )
 
@@ -131,7 +140,7 @@ class VerifyEmailVerificationTests(TestCase):
             update_fields=["expires_at"],
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(VerificationExpired):
             verify_email_verification(
                 verification_id=self.verification.pk,
                 code="123456",
@@ -144,7 +153,7 @@ class VerifyEmailVerificationTests(TestCase):
             update_fields=["verified_at"],
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(VerificationAlreadyUsed):
             verify_email_verification(
                 verification_id=self.verification.pk,
                 code="123456",
@@ -157,7 +166,7 @@ class VerifyEmailVerificationTests(TestCase):
             update_fields=["failed_attempts"],
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(VerificationAttemptsExceeded):
             verify_email_verification(
                 verification_id=self.verification.pk,
                 code="123456",
@@ -165,7 +174,7 @@ class VerifyEmailVerificationTests(TestCase):
             )
 
     def test_wrong_purpose_is_rejected(self):
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(VerificationPurposeMismatch):
             verify_email_verification(
                 verification_id=self.verification.pk,
                 code="123456",
@@ -173,7 +182,7 @@ class VerifyEmailVerificationTests(TestCase):
             )
 
     def test_missing_verification_is_rejected(self):
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(VerificationNotFound):
             verify_email_verification(
                 verification_id=999999,
                 code="123456",
@@ -206,7 +215,7 @@ class VerifyLoginCodeTests(TestCase):
     def test_verify_login_code_raises_when_user_no_longer_exists(self):
         self.user.delete()
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(VerificationUserNotFound):
             verify_login_code(
                 verification_id=self.verification.pk,
                 code="123456",
@@ -215,4 +224,18 @@ class VerifyLoginCodeTests(TestCase):
         self.assertEqual(
             EmailVerification.objects.count(),
             0,
+        )
+
+    def test_verify_login_code_raises_when_code_is_invalid(self):
+        with self.assertRaises(InvalidVerificationCode):
+            verify_login_code(
+                verification_id=self.verification.pk,
+                code="123457",
+            )
+
+        self.verification.refresh_from_db()
+
+        self.assertEqual(
+            self.verification.failed_attempts,
+            1,
         )

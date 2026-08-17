@@ -142,7 +142,7 @@ class VerifyRegistrationCodeAPITests(APITestCase):
                 },
             ),
             {
-                "code": "654321",
+                "code": "123457",
             },
             format="json",
         )
@@ -152,7 +152,7 @@ class VerifyRegistrationCodeAPITests(APITestCase):
             status.HTTP_400_BAD_REQUEST,
         )
 
-    def test_verify_registration_code_returns_bad_request_when_verification_does_not_exist(self):
+    def test_verify_registration_code_returns_not_found_when_verification_does_not_exist(self):
         response = self.client.post(
             reverse(
                 "humans_api:registration-verify",
@@ -168,7 +168,7 @@ class VerifyRegistrationCodeAPITests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_400_BAD_REQUEST,
+            status.HTTP_404_NOT_FOUND,
         )
 
 
@@ -282,7 +282,7 @@ class CompleteRegistrationAPITests(APITestCase):
             0,
         )
 
-    def test_complete_registration_returns_bad_request_when_verification_does_not_exist(self):
+    def test_complete_registration_returns_not_found_when_verification_does_not_exist(self):
         response = self.client.post(
             reverse(
                 "humans_api:registration-complete",
@@ -299,7 +299,7 @@ class CompleteRegistrationAPITests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_400_BAD_REQUEST,
+            status.HTTP_404_NOT_FOUND,
         )
 
 
@@ -346,7 +346,7 @@ class CurrentHumanAPITests(APITestCase):
             status.HTTP_403_FORBIDDEN,
         )
 
-    def test_get_current_human_returns_bad_request_when_user_has_no_human(self):
+    def test_get_current_human_returns_not_found_when_user_has_no_human(self):
         user = User.objects.create_user(
             email="account@example.com",
         )
@@ -358,5 +358,5 @@ class CurrentHumanAPITests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_400_BAD_REQUEST,
+            status.HTTP_404_NOT_FOUND,
         )

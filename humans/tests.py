@@ -1,12 +1,20 @@
 from datetime import timedelta
 
-from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
 from django.test import TestCase
 from django.utils import timezone
 
+from accounts.exceptions import (
+    InvalidVerificationCode,
+    VerificationNotFound,
+    VerificationPurposeMismatch,
+)
 from accounts.models import User, EmailVerification
 
+from humans.exceptions import (
+    EmailAlreadyRegistered,
+    RegistrationNotVerified,
+)
 from humans.models import Human
 from humans.services import (
     complete_registration,
@@ -65,7 +73,7 @@ class StartRegistrationTests(TestCase):
             email="human@example.com",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(EmailAlreadyRegistered):
             start_registration(email="human@example.com")
 
         self.assertEqual(EmailVerification.objects.count(), 0)
@@ -90,25 +98,7 @@ class VerifyRegistrationCodeTests(TestCase):
         self.assertIsNotNone(verification.verified_at)
         self.assertEqual(User.objects.count(), 0)
 
-    def test_verify_registration_code_raises_when_code_is_expired(self):
-        verification = EmailVerification.objects.create(
-            email="human@example.com",
-            purpose=EmailVerification.Purpose.REGISTRATION,
-            code_hash=make_password("123456"),
-            expires_at=timezone.now() - timedelta(seconds=1),
-        )
-
-        with self.assertRaises(ValidationError):
-            verify_registration_code(
-                verification_id=verification.pk,
-                code="123456",
-            )
-
-        verification.refresh_from_db()
-
-        self.assertIsNone(verification.verified_at)
-
-    def test_verify_registration_code_raises_when_code_was_already_verified(self):
+    def test_verify_registration_code_raises_when_code_is_invalid(self):
         verification = EmailVerification.objects.create(
             email="human@example.com",
             purpose=EmailVerification.Purpose.REGISTRATION,
@@ -116,30 +106,7 @@ class VerifyRegistrationCodeTests(TestCase):
             expires_at=timezone.now() + timedelta(minutes=5),
         )
 
-        verify_registration_code(
-            verification_id=verification.pk,
-            code="123456",
-        )
-
-        verification.refresh_from_db()
-
-        self.assertIsNotNone(verification.verified_at)
-
-        with self.assertRaises(ValidationError):
-            verify_registration_code(
-                verification_id=verification.pk,
-                code="123456",
-            )
-
-    def test_verify_registration_code_raises_and_increments_failed_attempts_when_code_is_invalid(self):
-        verification = EmailVerification.objects.create(
-            email="human@example.com",
-            purpose=EmailVerification.Purpose.REGISTRATION,
-            code_hash=make_password("123456"),
-            expires_at=timezone.now() + timedelta(minutes=5),
-        )
-
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(InvalidVerificationCode):
             verify_registration_code(
                 verification_id=verification.pk,
                 code="123457",
@@ -147,28 +114,10 @@ class VerifyRegistrationCodeTests(TestCase):
 
         verification.refresh_from_db()
 
-        self.assertIsNone(verification.verified_at)
-        self.assertEqual(verification.failed_attempts, 1)
-
-    def test_verify_registration_code_raises_when_failed_attempts_limit_is_reached(self):
-        verification = EmailVerification.objects.create(
-            email="human@example.com",
-            purpose=EmailVerification.Purpose.REGISTRATION,
-            code_hash=make_password("123456"),
-            expires_at=timezone.now() + timedelta(minutes=5),
-            failed_attempts=3,
+        self.assertEqual(
+            verification.failed_attempts,
+            1,
         )
-
-        with self.assertRaises(ValidationError):
-            verify_registration_code(
-                verification_id=verification.pk,
-                code="123456",
-            )
-
-        verification.refresh_from_db()
-
-        self.assertIsNone(verification.verified_at)
-        self.assertEqual(verification.failed_attempts, 3)
 
     def test_verify_registration_code_rejects_login_verification(self):
         verification = EmailVerification.objects.create(
@@ -178,7 +127,7 @@ class VerifyRegistrationCodeTests(TestCase):
             expires_at=timezone.now() + timedelta(minutes=5),
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(VerificationPurposeMismatch):
             verify_registration_code(
                 verification_id=verification.pk,
                 code="123456",
@@ -216,7 +165,7 @@ class CompleteRegistrationTests(TestCase):
     def test_complete_registration_raises_when_email_is_not_verified(self):
         self.assertIsNone(self.verification.verified_at)
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(RegistrationNotVerified):
             complete_registration(
                 verification_id=self.verification.pk,
                 first_name="My",
@@ -237,7 +186,7 @@ class CompleteRegistrationTests(TestCase):
             email="human@example.com",
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(EmailAlreadyRegistered):
             complete_registration(
                 verification_id=self.verification.pk,
                 first_name="My",
@@ -247,3 +196,36 @@ class CompleteRegistrationTests(TestCase):
         self.assertEqual(User.objects.count(), 1)
         self.assertEqual(Human.objects.count(), 0)
         self.assertEqual(EmailVerification.objects.count(), 1)
+
+    def test_complete_registration_raises_when_verification_does_not_exist(self):
+        with self.assertRaises(VerificationNotFound):
+            complete_registration(
+                verification_id=999999,
+                first_name="My",
+                last_name="Human",
+            )
+
+    def test_complete_registration_rejects_login_verification(self):
+        self.verification.purpose = (
+            EmailVerification.Purpose.LOGIN
+        )
+        self.verification.verified_at = timezone.now()
+
+        self.verification.save(
+            update_fields=[
+                "purpose",
+                "verified_at",
+            ]
+        )
+
+        with self.assertRaises(VerificationPurposeMismatch):
+            complete_registration(
+                verification_id=self.verification.pk,
+                first_name="My",
+                last_name="Human",
+            )
+
+        self.assertEqual(
+            Human.objects.count(),
+            0,
+        )

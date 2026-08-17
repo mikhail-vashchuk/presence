@@ -1,12 +1,28 @@
 from django.contrib.auth import login
-from django.core.exceptions import ValidationError as DjangoValidationError
 
 from rest_framework import status
-from rest_framework.exceptions import ValidationError as APIValidationError
+from rest_framework.exceptions import (
+    NotFound,
+    ValidationError as APIValidationError,
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.exceptions import (
+    InvalidVerificationCode,
+    VerificationAlreadyUsed,
+    VerificationAttemptsExceeded,
+    VerificationExpired,
+    VerificationNotFound,
+    VerificationPurposeMismatch,
+)
+
+from humans.exceptions import (
+    EmailAlreadyRegistered,
+    HumanNotFound,
+    RegistrationNotVerified,
+)
 from humans.api.serializers import (
     CompleteRegistrationSerializer,
     EmailSerializer,
@@ -30,9 +46,11 @@ class StartRegistrationView(APIView):
             verification = start_registration(
                 email=serializer.validated_data["email"],
             )
-        except DjangoValidationError as error:
+        except EmailAlreadyRegistered as error:
             raise APIValidationError(
-                {"detail": error.messages}
+                {
+                    "detail": "Email is already registered",
+                }
             ) from error
 
         return Response(
@@ -55,9 +73,47 @@ class VerifyRegistrationCodeView(APIView):
                 verification_id=verification_id,
                 code=serializer.validated_data["code"],
             )
-        except DjangoValidationError as error:
+
+        except VerificationNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Verification does not exist",
+                }
+            ) from error
+
+        except VerificationPurposeMismatch as error:
             raise APIValidationError(
-                {"detail": error.messages}
+                {
+                    "detail": "Verification cannot be used for registration",
+                }
+            ) from error
+
+        except VerificationExpired as error:
+            raise APIValidationError(
+                {
+                    "detail": "Verification code has expired",
+                }
+            ) from error
+
+        except VerificationAlreadyUsed as error:
+            raise APIValidationError(
+                {
+                    "detail": "Verification has already been used",
+                }
+            ) from error
+
+        except VerificationAttemptsExceeded as error:
+            raise APIValidationError(
+                {
+                    "detail": "Too many failed verification attempts",
+                }
+            ) from error
+
+        except InvalidVerificationCode as error:
+            raise APIValidationError(
+                {
+                    "detail": "Invalid verification code",
+                }
             ) from error
 
         return Response(
@@ -78,9 +134,33 @@ class CompleteRegistrationView(APIView):
                 first_name=serializer.validated_data["first_name"],
                 last_name=serializer.validated_data["last_name"],
             )
-        except DjangoValidationError as error:
+
+        except VerificationNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Verification does not exist",
+                }
+            ) from error
+
+        except VerificationPurposeMismatch as error:
             raise APIValidationError(
-                {"detail": error.messages}
+                {
+                    "detail": "Verification cannot be used for registration",
+                }
+            ) from error
+
+        except RegistrationNotVerified as error:
+            raise APIValidationError(
+                {
+                    "detail": "Email verification is incomplete",
+                }
+            ) from error
+
+        except EmailAlreadyRegistered as error:
+            raise APIValidationError(
+                {
+                    "detail": "Email is already registered",
+                }
             ) from error
 
         login(request, human.user)
@@ -101,9 +181,11 @@ class CurrentHumanView(APIView):
             human = get_current_human(
                 user_id=request.user.pk,
             )
-        except DjangoValidationError as error:
-            raise APIValidationError(
-                {"detail": error.messages}
+        except HumanNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Human does not exist",
+                }
             ) from error
 
         serializer = CurrentHumanSerializer(human)

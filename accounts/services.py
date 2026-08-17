@@ -2,10 +2,19 @@ from datetime import timedelta
 from secrets import randbelow
 
 from django.contrib.auth.hashers import check_password, make_password
-from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from accounts.exceptions import (
+    EmailNotRegistered,
+    InvalidVerificationCode,
+    VerificationAlreadyUsed,
+    VerificationAttemptsExceeded,
+    VerificationExpired,
+    VerificationNotFound,
+    VerificationPurposeMismatch,
+    VerificationUserNotFound,
+)
 from accounts.models import EmailVerification, User
 
 
@@ -34,23 +43,19 @@ def verify_email_verification(*, verification_id, code, purpose):
             .get(pk=verification_id)
         )
     except EmailVerification.DoesNotExist as error:
-        raise ValidationError(
-            "Verification does not exist"
-        ) from error
+        raise VerificationNotFound from error
 
     if verification.purpose != purpose:
-        raise ValidationError(
-            "Verification purpose does not match"
-        )
+        raise VerificationPurposeMismatch
 
     if verification.expires_at <= timezone.now():
-        raise ValidationError("Code expired")
+        raise VerificationExpired
 
     if verification.verified_at is not None:
-        raise ValidationError("Code was already verified")
+        raise VerificationAlreadyUsed
 
     if verification.failed_attempts >= 3:
-        raise ValidationError("Too many failed attempts")
+        raise VerificationAttemptsExceeded
 
     if not check_password(code, verification.code_hash):
         verification.failed_attempts += 1
@@ -66,7 +71,7 @@ def verify_email_verification(*, verification_id, code, purpose):
 
 def start_login(email):
     if not User.objects.filter(email=email).exists():
-        raise ValidationError("Email is not registered")
+        raise EmailNotRegistered
 
     verification, code = create_email_verification(
         email=email,
@@ -86,7 +91,7 @@ def verify_login_code(*, verification_id, code):
     )
 
     if verification is None:
-        raise ValidationError("Invalid verification code")
+        raise InvalidVerificationCode
 
     try:
         user = User.objects.get(
@@ -95,9 +100,7 @@ def verify_login_code(*, verification_id, code):
     except User.DoesNotExist as error:
         verification.delete()
 
-        raise ValidationError(
-            "User does not exist"
-        ) from error
+        raise VerificationUserNotFound from error
 
     verification.delete()
 
