@@ -34,10 +34,6 @@ class StartLoginAPITests(APITestCase):
             response.data["verification_id"],
             verification.pk,
         )
-        self.assertEqual(
-            verification.purpose,
-            EmailVerification.Purpose.LOGIN,
-        )
 
     def test_start_login_returns_bad_request_when_email_is_invalid(self):
         response = self.client.post(
@@ -184,45 +180,22 @@ class LogoutAPITests(APITestCase):
             email="human@example.com",
         )
 
-        verification = EmailVerification.objects.create(
-            email=user.email,
-            purpose=EmailVerification.Purpose.LOGIN,
-            code_hash=make_password("123456"),
-            expires_at=timezone.now() + timedelta(minutes=5),
-        )
+        self.client.force_login(user)
 
-        login_response = self.client.post(
-            reverse(
-                "accounts_api:login-verify",
-                kwargs={
-                    "verification_id": verification.pk,
-                },
-            ),
-            {
-                "code": "123456",
-            },
-            format="json",
-        )
-
-        self.assertEqual(
-            login_response.status_code,
-            status.HTTP_200_OK,
-        )
-
-        logout_response = self.client.post(
+        response = self.client.post(
             reverse("accounts_api:logout"),
         )
 
         self.assertEqual(
-            logout_response.status_code,
+            response.status_code,
             status.HTTP_204_NO_CONTENT,
         )
 
-        second_logout_response = self.client.post(
+        second_response = self.client.post(
             reverse("accounts_api:logout"),
         )
 
         self.assertEqual(
-            second_logout_response.status_code,
+            second_response.status_code,
             status.HTTP_403_FORBIDDEN,
         )

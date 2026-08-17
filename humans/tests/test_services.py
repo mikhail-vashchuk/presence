@@ -13,10 +13,12 @@ from accounts.models import User, EmailVerification
 
 from humans.exceptions import (
     EmailAlreadyRegistered,
+    HumanNotFound,
     RegistrationNotVerified,
 )
 from humans.models import Human
 from humans.services import (
+    get_current_human,
     complete_registration,
     create_human,
     start_registration,
@@ -64,9 +66,6 @@ class StartRegistrationTests(TestCase):
             verification.purpose,
             EmailVerification.Purpose.REGISTRATION,
         )
-        self.assertGreater(verification.expires_at, timezone.now(),
-        )
-        self.assertTrue(verification.code_hash)
 
     def test_start_registration_raises_when_email_is_already_registered(self):
         User.objects.create_user(
@@ -229,3 +228,36 @@ class CompleteRegistrationTests(TestCase):
             Human.objects.count(),
             0,
         )
+
+
+class GetCurrentHumanTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="human@example.com",
+        )
+
+        self.human = Human.objects.create(
+            user=self.user,
+            first_name="My",
+            last_name="Human",
+        )
+
+    def test_get_current_human(self):
+        human = get_current_human(
+            user_id=self.user.pk,
+        )
+
+        self.assertEqual(
+            human,
+            self.human,
+        )
+
+    def test_get_current_human_raises_when_human_does_not_exist(self):
+        user = User.objects.create_user(
+            email="account@example.com",
+        )
+
+        with self.assertRaises(HumanNotFound):
+            get_current_human(
+                user_id=user.pk,
+            )

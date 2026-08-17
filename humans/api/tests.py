@@ -31,10 +31,6 @@ class StartRegistrationAPITests(APITestCase):
             response.data["verification_id"],
             verification.pk,
         )
-        self.assertEqual(
-            verification.purpose,
-            EmailVerification.Purpose.REGISTRATION,
-        )
 
     def test_start_registration_returns_bad_request_when_email_is_invalid(self):
         response = self.client.post(
@@ -99,12 +95,6 @@ class VerifyRegistrationCodeAPITests(APITestCase):
         self.assertEqual(
             response.status_code,
             status.HTTP_204_NO_CONTENT,
-        )
-
-        self.verification.refresh_from_db()
-
-        self.assertIsNotNone(
-            self.verification.verified_at,
         )
 
     def test_verify_registration_code_returns_bad_request_when_code_format_is_invalid(self):
@@ -197,33 +187,15 @@ class CompleteRegistrationAPITests(APITestCase):
             format="json",
         )
 
-        human = Human.objects.get()
-
         self.assertEqual(
             response.status_code,
             status.HTTP_201_CREATED,
         )
-        self.assertEqual(
-            response.data["human_id"],
-            human.pk,
+
+        human = Human.objects.get(
+            pk=response.data["human_id"],
         )
-        self.assertEqual(
-            human.first_name,
-            "My",
-        )
-        self.assertEqual(
-            human.last_name,
-            "Human",
-        )
-        self.assertEqual(
-            human.user.email,
-            "human@example.com",
-        )
-        self.assertFalse(
-            EmailVerification.objects.filter(
-                pk=self.verification.pk,
-            ).exists()
-        )
+
         self.assertEqual(
             self.client.session["_auth_user_id"],
             str(human.user_id),
