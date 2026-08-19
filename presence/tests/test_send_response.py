@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.test import TestCase
 
-from humans.services import create_human
+from humans.tests.factories import create_test_human
 
 from presence.models import Invitation, Moment, Presence, Response
 from presence.services import create_invitation, send_response
@@ -10,13 +10,13 @@ from presence.services import create_invitation, send_response
 
 class SendResponseTests(TestCase):
     def setUp(self):
-        self.inviter = create_human(
+        self.inviter = create_test_human(
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
         )
 
-        self.responder = create_human(
+        self.responder = create_test_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
@@ -162,7 +162,7 @@ class SendResponseTests(TestCase):
             moment=moment,
         )
 
-        another_inviter = create_human(
+        another_inviter = create_test_human(
             first_name="Another",
             last_name="Inviter",
             email="another-inviter@example.com",
@@ -197,7 +197,7 @@ class SendResponseTests(TestCase):
             words="Pending response",
         )
 
-        another_inviter = create_human(
+        another_inviter = create_test_human(
             first_name="Another",
             last_name="Inviter",
             email="another-inviter@example.com",

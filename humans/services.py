@@ -47,20 +47,6 @@ def verify_registration_code(*, verification_id, code):
 
 
 @transaction.atomic
-def create_human(*, first_name, last_name, email):
-    user = User.objects.create_user(
-        email=email,
-        password=None,
-    )
-
-    return Human.objects.create(
-        user=user,
-        first_name=first_name,
-        last_name=last_name,
-    )
-
-
-@transaction.atomic
 def complete_registration(*, verification_id, first_name, last_name):
     try:
         verification = (
@@ -80,10 +66,15 @@ def complete_registration(*, verification_id, first_name, last_name):
     if User.objects.filter(email=verification.email).exists():
         raise EmailAlreadyRegistered
 
-    human = create_human(
+    user = User.objects.create_user(
+        email=verification.email,
+        password=None,
+    )
+
+    human = Human.objects.create(
+        user=user,
         first_name=first_name,
         last_name=last_name,
-        email=verification.email,
     )
 
     verification.delete()

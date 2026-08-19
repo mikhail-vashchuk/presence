@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from humans.services import create_human
+from humans.tests.factories import create_test_human
 
 from presence.models import Invitation, Response
 from presence.services import create_invitation, send_response, close_invitation
@@ -8,12 +8,12 @@ from presence.services import create_invitation, send_response, close_invitation
 
 class CloseInvitationTests(TestCase):
     def setUp(self):
-        self.inviter = create_human(
+        self.inviter = create_test_human(
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
         )
-        self.responder = create_human(
+        self.responder = create_test_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
@@ -30,7 +30,7 @@ class CloseInvitationTests(TestCase):
             words="Response",
         )
 
-        another_human = create_human(
+        another_human = create_test_human(
             first_name="Another",
             last_name="Human",
             email="another@example.com",

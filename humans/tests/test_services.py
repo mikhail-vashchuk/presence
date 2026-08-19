@@ -20,38 +20,9 @@ from humans.models import Human
 from humans.services import (
     get_current_human,
     complete_registration,
-    create_human,
     start_registration,
     verify_registration_code,
 )
-
-
-class CreateHumanTests(TestCase):
-    def test_create_human_creates_user_and_human(self):
-        human = create_human(
-            first_name="My",
-            last_name="Human",
-            email="human@example.com",
-        )
-
-        self.assertEqual(User.objects.count(), 1)
-        self.assertEqual(Human.objects.count(), 1)
-
-        self.assertEqual(
-            human.user.email,
-            "human@example.com",
-        )
-        self.assertEqual(
-            human.first_name,
-            "My",
-        )
-        self.assertEqual(
-            human.last_name,
-            "Human",
-        )
-        self.assertFalse(
-            human.user.has_usable_password(),
-        )
 
 
 class StartRegistrationTests(TestCase):

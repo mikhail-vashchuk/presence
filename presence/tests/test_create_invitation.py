@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.test import TestCase
 
-from humans.services import create_human
+from humans.tests.factories import create_test_human
 
 from presence.models import Invitation, Moment, Presence, Response
 from presence.services import create_invitation
@@ -10,7 +10,7 @@ from presence.services import create_invitation
 
 class CreateInvitationTests(TestCase):
     def setUp(self):
-        self.human = create_human(
+        self.human = create_test_human(
             first_name="Primary",
             last_name="Human",
             email="primary-human@example.com",
@@ -48,7 +48,7 @@ class CreateInvitationTests(TestCase):
         )
 
     def test_create_invitation_raises_when_human_has_active_moment(self):
-        responder = create_human(
+        responder = create_test_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
@@ -89,7 +89,7 @@ class CreateInvitationTests(TestCase):
         )
 
     def test_create_invitation_raises_when_human_has_pending_response(self):
-        another_inviter = create_human(
+        another_inviter = create_test_human(
             first_name="Another",
             last_name="Inviter",
             email="another-inviter@example.com",

@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.utils import timezone
 
-from humans.services import create_human
+from humans.tests.factories import create_test_human
 
 from presence.models import Moment
 from presence.services import create_invitation, send_response, accept_response, complete_moment
@@ -9,12 +9,12 @@ from presence.services import create_invitation, send_response, accept_response,
 
 class CompleteMomentTests(TestCase):
     def setUp(self):
-        self.inviter = create_human(
+        self.inviter = create_test_human(
             first_name="Inviter",
             last_name="Human",
             email="inviter@example.com",
         )
-        self.responder = create_human(
+        self.responder = create_test_human(
             first_name="Responder",
             last_name="Human",
             email="responder@example.com",
@@ -79,7 +79,7 @@ class CompleteMomentTests(TestCase):
         self.assertEqual(self.moment.ended_at, original_ended_at_time)
 
     def test_complete_moment_raises_when_human_is_not_participant(self):
-        another_human = create_human(
+        another_human = create_test_human(
             first_name="Another",
             last_name="Human",
             email="another-human@example.com",
