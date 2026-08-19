@@ -5,7 +5,7 @@ from django.db import models
 class Human(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="human",
     )
 
