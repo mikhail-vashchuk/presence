@@ -2,27 +2,40 @@ from uuid import uuid4
 
 from django.test import TestCase
 
+from humans.exceptions import HumanNotFound
 from humans.tests.factories import create_test_human
 
-from presence.models import Invitation, Moment, Presence, Response
+from presence.exceptions import (
+    HumanHasActivePresence,
+    HumanHasOpenInvitation,
+    HumanHasPendingResponse,
+)
+from presence.models import (
+    Invitation,
+    Moment,
+    Presence,
+    Response,
+)
 from presence.services import create_invitation
 
 
 class CreateInvitationTests(TestCase):
-    def setUp(self):
-        self.human = create_test_human(
-            first_name="Primary",
-            last_name="Human",
-            email="primary-human@example.com",
-        )
+    def test_create_invitation_raises_when_human_does_not_exist(self):
+        with self.assertRaises(HumanNotFound):
+            create_invitation(
+                human_id=999999,
+                gesture="Invitation",
+            )
 
     def test_create_invitation(self):
+        human = create_test_human()
+
         invitation = create_invitation(
-            human=self.human,
+            human_id=human.pk,
             gesture="Invitation",
         )
 
-        self.assertEqual(invitation.human, self.human)
+        self.assertEqual(invitation.human, human)
         self.assertEqual(invitation.gesture, "Invitation")
         self.assertEqual(
             invitation.status,
@@ -30,34 +43,36 @@ class CreateInvitationTests(TestCase):
         )
 
     def test_create_invitation_raises_when_human_has_open_invitation(self):
+        human = create_test_human()
+
         Invitation.objects.create(
-            human=self.human,
-            gesture="First invitation",
+            human=human,
+            gesture="Invitation",
             status=Invitation.Status.OPEN,
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(HumanHasOpenInvitation):
             create_invitation(
-                human=self.human,
+                human_id=human.pk,
                 gesture="Another invitation",
             )
 
         self.assertEqual(
-            self.human.invitations.count(),
+            human.invitations.count(),
             1,
         )
 
-    def test_create_invitation_raises_when_human_has_active_moment(self):
-        responder = create_test_human(
-            first_name="Responder",
-            last_name="Human",
-            email="responder@example.com",
-        )
+    def test_create_invitation_raises_when_human_has_active_presence(self):
+        human = create_test_human()
 
         invitation = Invitation.objects.create(
-            human=self.human,
+            human=human,
             gesture="Invitation",
             status=Invitation.Status.MATCHED,
+        )
+
+        responder = create_test_human(
+            email="responder@test.com",
         )
 
         response = Response.objects.create(
@@ -73,46 +88,46 @@ class CreateInvitationTests(TestCase):
         )
 
         Presence.objects.create(
-            human=self.human,
+            human=human,
             moment=moment,
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(HumanHasActivePresence):
             create_invitation(
-                human=self.human,
-                gesture="Another invitation",
+                human_id=human.pk,
+                gesture="Invitation",
             )
 
         self.assertEqual(
-            self.human.invitations.count(),
+            human.invitations.count(),
             1,
         )
 
     def test_create_invitation_raises_when_human_has_pending_response(self):
-        another_inviter = create_test_human(
-            first_name="Another",
-            last_name="Inviter",
-            email="another-inviter@example.com",
+        human = create_test_human()
+
+        another_human = create_test_human(
+            email="another-human@test.com",
         )
 
         invitation = Invitation.objects.create(
-            human=another_inviter,
+            human=another_human,
             gesture="Invitation",
         )
 
         Response.objects.create(
-            human=self.human,
+            human=human,
             invitation=invitation,
             words="Response",
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(HumanHasPendingResponse):
             create_invitation(
-                human=self.human,
+                human_id=human.pk,
                 gesture="Another invitation",
             )
 
         self.assertEqual(
-            self.human.invitations.count(),
+            human.invitations.count(),
             0,
         )

@@ -1,60 +1,115 @@
-from django.utils import timezone
 from uuid import uuid4
 
 from django.db import transaction
+from django.utils import timezone
 
-from .models import Invitation, Presence, Response, Moment
+from humans.exceptions import HumanNotFound
+from humans.models import Human
+
+from presence.exceptions import (
+    CannotRespondToOwnInvitation,
+    InvitationNotFound,
+    InvitationNotOpen,
+    HumanHasActivePresence,
+    HumanHasOpenInvitation,
+    HumanHasPendingResponse,
+    MomentAlreadyCompleted,
+    MomentNotFound,
+    NotInvitationOwner,
+    NotMomentParticipant,
+    NotResponseAuthor,
+    ResponseNotFound,
+    ResponseNotPending,
+)
+from presence.models import (
+    Invitation,
+    Presence,
+    Response,
+    Moment,
+)
 
 
-def create_invitation(*, human, gesture):
+@transaction.atomic
+def create_invitation(
+        *,
+        human_id,
+        gesture
+):
+    try:
+        human = (
+            Human.objects
+            .select_for_update()
+            .get(pk=human_id)
+        )
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
+
     if human.invitations.filter(
         status=Invitation.Status.OPEN,
     ).exists():
-        raise ValueError("Human already has an open invitation.")
+        raise HumanHasOpenInvitation
 
     if human.presences.filter(
         moment__ended_at__isnull=True,
     ).exists():
-        raise ValueError("Human is participating in an active moment.")
+        raise HumanHasActivePresence
 
     if human.responses.filter(
         status=Response.Status.PENDING,
     ).exists():
-        raise ValueError("Human has a pending response.")
+        raise HumanHasPendingResponse
 
     return Invitation.objects.create(
         human=human,
         gesture=gesture,
     )
 
+
 @transaction.atomic
-def send_response(*, human, invitation, words):
-    invitation = Invitation.objects.select_for_update().get(
-        pk=invitation.pk
-    )
+def send_response(
+        *,
+        human_id,
+        invitation_id,
+        words
+):
+    try:
+        human = (
+            Human.objects
+            .select_for_update()
+            .get(pk=human_id)
+        )
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
+
+    try:
+        invitation = (
+            Invitation.objects
+            .select_for_update()
+            .get(pk=invitation_id)
+        )
+    except Invitation.DoesNotExist as error:
+        raise InvitationNotFound from error
 
     if invitation.status != Invitation.Status.OPEN:
-        raise ValueError("Invitation is not open.")
+        raise InvitationNotOpen
 
     if invitation.human_id == human.pk:
-        raise ValueError(
-            "Human cannot respond to their own invitation."
-        )
+        raise CannotRespondToOwnInvitation
 
     if human.invitations.filter(
         status=Invitation.Status.OPEN,
     ).exists():
-        raise ValueError("Human already has an open invitation.")
+        raise HumanHasOpenInvitation
 
     if human.presences.filter(
         moment__ended_at__isnull=True,
     ).exists():
-        raise ValueError("Human already has an active presence.")
+        raise HumanHasActivePresence
 
     if human.responses.filter(
         status=Response.Status.PENDING,
     ).exists():
-        raise ValueError("Human already has a pending response.")
+        raise HumanHasPendingResponse
 
     return Response.objects.create(
         human=human,
@@ -62,39 +117,88 @@ def send_response(*, human, invitation, words):
         words=words,
     )
 
-@transaction.atomic
-def reject_response(*, human, response):
-    response = Response.objects.select_for_update().get(pk=response.pk)
 
-    if response.status != Response.Status.PENDING:
-        raise ValueError("Response is not pending.")
+@transaction.atomic
+def reject_response(
+        *,
+        human_id,
+        response_id,
+):
+    try:
+        human = (
+            Human.objects
+            .get(pk=human_id)
+        )
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
+
+    try:
+        response = (
+            Response.objects
+            .select_for_update()
+            .get(pk=response_id)
+        )
+    except Response.DoesNotExist as error:
+        raise ResponseNotFound from error
 
     if response.invitation.human_id != human.pk:
-        raise ValueError(
-            "Only the invitation owner can reject this response."
-        )
+        raise NotInvitationOwner
+
+    if response.status != Response.Status.PENDING:
+        raise ResponseNotPending
 
     response.status = Response.Status.REJECTED
     response.save(update_fields=["status"])
 
     return response
 
+
 @transaction.atomic
-def accept_response(*, human, response):
-    invitation = Invitation.objects.select_for_update().get(pk=response.invitation_id)
+def accept_response(
+        *,
+        human_id,
+        response_id
+):
+    try:
+        human = (
+            Human.objects
+            .get(pk=human_id)
+        )
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
 
-    response = Response.objects.select_for_update().get(pk=response.pk)
+    try:
+        invitation_id = (
+            Response.objects
+            .values_list("invitation_id", flat=True)
+            .get(pk=response_id)
+        )
+    except Response.DoesNotExist as error:
+        raise ResponseNotFound from error
 
-    if response.status != Response.Status.PENDING:
-        raise ValueError("Response is not pending.")
+    invitation = (
+        Invitation.objects
+        .select_for_update()
+        .get(pk=invitation_id)
+    )
+
+    try:
+        response = (
+            Response.objects
+            .select_for_update()
+            .get(pk=response_id)
+        )
+    except Response.DoesNotExist as error:
+        raise ResponseNotFound from error
+
+    if human.pk != invitation.human_id:
+        raise NotInvitationOwner
 
     if invitation.status != Invitation.Status.OPEN:
-        raise ValueError("Invitation is not open.")
+        raise InvitationNotOpen
 
-    if invitation.human_id != human.pk:
-        raise ValueError(
-            "Only the invitation owner can accept this response."
-        )
+    if response.status != Response.Status.PENDING:
+        raise ResponseNotPending
 
     response.status = Response.Status.ACCEPTED
     response.save(update_fields=["status"])
@@ -118,7 +222,7 @@ def accept_response(*, human, response):
 
     Presence.objects.create(
         moment=moment,
-        human=invitation.human,
+        human=human,
     )
 
     Presence.objects.create(
@@ -128,30 +232,69 @@ def accept_response(*, human, response):
 
     return moment
 
+
 @transaction.atomic
-def complete_moment(*, human, moment):
-    moment = Moment.objects.select_for_update().get(pk=moment.pk)
+def complete_moment(
+        *,
+        human_id,
+        moment_id,
+):
+    try:
+        human = (
+            Human.objects
+            .get(pk=human_id)
+        )
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
+
+    try:
+        moment = (
+            Moment.objects
+            .select_for_update()
+            .get(pk=moment_id)
+        )
+    except Moment.DoesNotExist as error:
+        raise MomentNotFound from error
+
+    if not moment.presences.filter(
+            human_id=human.pk,
+    ).exists():
+        raise NotMomentParticipant
 
     if moment.ended_at is not None:
-        raise ValueError("Moment is already completed.")
-
-    if not moment.presences.filter(human_id=human.pk).exists():
-        raise ValueError("Only a moment participant can complete this moment.")
+        raise MomentAlreadyCompleted
 
     moment.ended_at = timezone.now()
     moment.save(update_fields=["ended_at"])
 
     return moment
 
-@transaction.atomic
-def close_invitation(*, human, invitation):
-    invitation = Invitation.objects.select_for_update().get(pk=invitation.pk)
 
-    if invitation.status != Invitation.Status.OPEN:
-        raise ValueError("Invitation is not open.")
+@transaction.atomic
+def close_invitation(
+        *,
+        human_id,
+        invitation_id,
+):
+    try:
+        human = Human.objects.get(pk=human_id)
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
+
+    try:
+        invitation = (
+            Invitation.objects
+            .select_for_update()
+            .get(pk=invitation_id)
+        )
+    except Invitation.DoesNotExist as error:
+        raise InvitationNotFound from error
 
     if invitation.human_id != human.pk:
-        raise ValueError("Invitation can be closed only by its author.")
+        raise NotInvitationOwner
+
+    if invitation.status != Invitation.Status.OPEN:
+        raise InvitationNotOpen
 
     invitation.status = Invitation.Status.CLOSED
     invitation.save(update_fields=["status"])
@@ -165,15 +308,35 @@ def close_invitation(*, human, invitation):
 
     return invitation
 
-@transaction.atomic
-def cancel_response(*, human, response):
-    response = Response.objects.select_for_update().get(pk=response.pk)
 
-    if response.status != Response.Status.PENDING:
-        raise ValueError("Only pending responses can be cancelled.")
+@transaction.atomic
+def cancel_response(
+        *,
+        human_id,
+        response_id
+):
+    try:
+        human = (
+            Human.objects
+            .get(pk=human_id)
+        )
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
+
+    try:
+        response = (
+            Response.objects
+            .select_for_update()
+            .get(pk=response_id)
+        )
+    except Response.DoesNotExist as error:
+        raise ResponseNotFound from error
 
     if response.human_id != human.pk:
-        raise ValueError("Response can be cancelled only by its author.")
+        raise NotResponseAuthor
+
+    if response.status != Response.Status.PENDING:
+        raise ResponseNotPending
 
     response.status = Response.Status.CANCELLED
     response.save(update_fields=["status"])

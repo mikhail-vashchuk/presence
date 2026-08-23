@@ -1,31 +1,32 @@
 from django.test import TestCase
 
+from humans.exceptions import HumanNotFound
 from humans.tests.factories import create_test_human
 
-from presence.models import Response
-from presence.services import create_invitation, send_response, cancel_response
+from presence.exceptions import (
+    ResponseNotFound,
+    NotResponseAuthor,
+    ResponseNotPending,
+)
+from presence.models import Invitation, Response
+from presence.services import cancel_response
 
 
 class CancelResponseTests(TestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            first_name="Inviter",
-            last_name="Human",
-            email="inviter@example.com",
+            email="inviter@test.com",
         )
 
         self.responder = create_test_human(
-            first_name="Responder",
-            last_name="Human",
-            email="responder@example.com",
+            email="responder@test.com",
         )
 
-        self.invitation = create_invitation(
+        self.invitation = Invitation.objects.create(
             human=self.inviter,
             gesture="Invitation",
         )
-
-        self.response = send_response(
+        self.response = Response.objects.create(
             human=self.responder,
             invitation=self.invitation,
             words="Response",
@@ -33,8 +34,8 @@ class CancelResponseTests(TestCase):
 
     def test_cancel_response(self):
         cancel_response(
-            human=self.responder,
-            response=self.response,
+            human_id=self.responder.pk,
+            response_id=self.response.pk,
         )
 
         self.response.refresh_from_db()
@@ -42,39 +43,51 @@ class CancelResponseTests(TestCase):
         self.assertEqual(
             self.response.status,
             Response.Status.CANCELLED
+        )
+
+    def test_cancel_response_raises_when_human_not_found(self):
+        with self.assertRaises(HumanNotFound):
+            cancel_response(
+                human_id=999999,
+                response_id=self.response.pk,
+            )
+
+        self.response.refresh_from_db()
+
+        self.assertEqual(
+            self.response.status,
+            Response.Status.PENDING,
+        )
+
+    def test_cancel_response_raises_when_response_not_found(self):
+        with self.assertRaises(ResponseNotFound):
+            cancel_response(
+                human_id=self.responder.pk,
+                response_id=999999,
+            )
+
+    def test_cancel_response_raises_when_human_is_not_response_author(self):
+        with self.assertRaises(NotResponseAuthor):
+            cancel_response(
+                human_id=self.inviter.pk,
+                response_id=self.response.pk,
+            )
+
+        self.response.refresh_from_db()
+
+        self.assertEqual(
+            self.response.status,
+            Response.Status.PENDING
         )
 
     def test_cancel_response_raises_when_response_is_not_pending(self):
-        self.response.status = Response.Status.CLOSED
+        self.response.status = Response.Status.CANCELLED
         self.response.save(update_fields=["status"])
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ResponseNotPending):
             cancel_response(
-                human=self.responder,
-                response=self.response,
-            )
-
-        self.response.refresh_from_db()
-
-        self.assertEqual(
-            self.response.status,
-            Response.Status.CLOSED
-        )
-
-    def test_cancel_response_uses_database_state_when_response_instance_is_stale(self):
-        Response.objects.filter(pk=self.response.pk).update(
-            status=Response.Status.CANCELLED
-        )
-
-        self.assertEqual(
-            self.response.status,
-            Response.Status.PENDING
-        )
-
-        with self.assertRaises(ValueError):
-            cancel_response(
-                human=self.responder,
-                response=self.response,
+                human_id=self.responder.pk,
+                response_id=self.response.pk,
             )
 
         self.response.refresh_from_db()
@@ -82,18 +95,4 @@ class CancelResponseTests(TestCase):
         self.assertEqual(
             self.response.status,
             Response.Status.CANCELLED
-        )
-
-    def test_cancel_response_raises_when_human_is_not_response_author(self):
-        with self.assertRaises(ValueError):
-            cancel_response(
-                human=self.inviter,
-                response=self.response,
-            )
-
-        self.response.refresh_from_db()
-
-        self.assertEqual(
-            self.response.status,
-            Response.Status.PENDING
         )

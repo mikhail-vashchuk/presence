@@ -2,45 +2,86 @@ from uuid import uuid4
 
 from django.test import TestCase
 
+from humans.exceptions import HumanNotFound
 from humans.tests.factories import create_test_human
 
-from presence.models import Invitation, Moment, Presence, Response
-from presence.services import create_invitation, send_response
+from presence.exceptions import (
+    CannotRespondToOwnInvitation,
+    HumanHasActivePresence,
+    HumanHasOpenInvitation,
+    HumanHasPendingResponse,
+    InvitationNotFound,
+    InvitationNotOpen,
+)
+from presence.models import (
+    Invitation,
+    Moment,
+    Presence,
+    Response
+)
+from presence.services import send_response
 
 
 class SendResponseTests(TestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            first_name="Inviter",
-            last_name="Human",
-            email="inviter@example.com",
-        )
-
-        self.responder = create_test_human(
-            first_name="Responder",
-            last_name="Human",
-            email="responder@example.com",
+            email="inviter@test.com",
         )
 
     def test_send_response(self):
-        invitation = create_invitation(
-            human=self.inviter,
+        invitation = Invitation.objects.create(
+            human_id=self.inviter.pk,
             gesture="Invitation",
         )
 
+        responder = create_test_human()
+
         response = send_response(
-            human=self.responder,
-            invitation=invitation,
+            human_id=responder.pk,
+            invitation_id=invitation.pk,
             words="Response",
         )
 
         self.assertEqual(Response.objects.count(), 1)
-        self.assertEqual(response.human, self.responder)
+        self.assertEqual(response.human, responder)
         self.assertEqual(response.invitation, invitation)
         self.assertEqual(response.words, "Response")
         self.assertEqual(
             response.status,
             Response.Status.PENDING,
+        )
+
+    def test_send_response_raises_when_human_not_found(self):
+        invitation = Invitation.objects.create(
+            human=self.inviter,
+            gesture="Invitation",
+        )
+
+        with self.assertRaises(HumanNotFound):
+            send_response(
+                human_id=999999,
+                invitation_id=invitation.pk,
+                words="Response",
+            )
+
+        self.assertEqual(
+            Response.objects.count(),
+            0,
+        )
+
+    def test_send_response_raises_when_invitation_not_found(self):
+        responder = create_test_human()
+
+        with self.assertRaises(InvitationNotFound):
+            send_response(
+                human_id=responder.pk,
+                invitation_id=999999,
+                words="Response",
+            )
+
+        self.assertEqual(
+            responder.responses.count(),
+            0,
         )
 
     def test_send_response_raises_when_invitation_is_closed(self):
@@ -50,103 +91,76 @@ class SendResponseTests(TestCase):
             status=Invitation.Status.CLOSED,
         )
 
-        with self.assertRaises(ValueError):
+        responder = create_test_human()
+
+        with self.assertRaises(InvitationNotOpen):
             send_response(
-                human=self.responder,
-                invitation=invitation,
+                human_id=responder.pk,
+                invitation_id=invitation.pk,
                 words="Response",
             )
 
         self.assertEqual(
-            self.responder.responses.count(),
+            responder.responses.count(),
             0,
         )
 
     def test_send_response_raises_when_invitation_belongs_to_responder(self):
-        own_invitation = create_invitation(
-            human=self.responder,
+        responder = create_test_human()
+
+        own_invitation = Invitation.objects.create(
+            human_id=responder.pk,
             gesture="Own invitation",
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(CannotRespondToOwnInvitation):
             send_response(
-                human=self.responder,
-                invitation=own_invitation,
+                human_id=responder.pk,
+                invitation_id=own_invitation.pk,
                 words="Response",
             )
 
         self.assertEqual(
-            self.responder.responses.count(),
+            responder.responses.count(),
             0,
         )
 
     def test_send_response_raises_when_responder_has_open_invitation(self):
-        create_invitation(
-            human=self.responder,
-            gesture="Responders own invitation",
-        )
-
-        another_invitation = create_invitation(
-            human=self.inviter,
-            gesture="Another invitation",
-        )
-
-        with self.assertRaises(ValueError):
-            send_response(
-                human=self.responder,
-                invitation=another_invitation,
-                words="Response",
-            )
-
-        self.assertEqual(
-            self.responder.responses.count(),
-            0,
-        )
-
-    def test_send_response_uses_database_state_when_invitation_instance_is_stale(self):
-        invitation = create_invitation(
-            human=self.inviter,
+        invitation = Invitation.objects.create(
+            human_id=self.inviter.pk,
             gesture="Invitation",
         )
 
-        Invitation.objects.filter(
-            pk=invitation.pk,
-        ).update(
-            status=Invitation.Status.CLOSED,
+        responder = create_test_human()
+
+        Invitation.objects.create(
+            human=responder,
+            gesture="Responders own invitation",
         )
 
-        self.assertEqual(
-            invitation.status,
-            Invitation.Status.OPEN,
-        )
-
-        with self.assertRaises(ValueError):
+        with self.assertRaises(HumanHasOpenInvitation):
             send_response(
-                human=self.responder,
-                invitation=invitation,
+                human_id=responder.pk,
+                invitation_id=invitation.pk,
                 words="Response",
             )
 
-        invitation.refresh_from_db()
-
         self.assertEqual(
-            invitation.status,
-            Invitation.Status.CLOSED,
-        )
-        self.assertEqual(
-            Response.objects.count(),
+            responder.responses.count(),
             0,
         )
 
-    def test_send_response_raises_when_responder_has_active_moment(self):
+    def test_send_response_raises_when_responder_has_an_active_presence(self):
         matched_invitation = Invitation.objects.create(
             human=self.inviter,
             gesture="Matched invitation",
             status=Invitation.Status.MATCHED,
         )
 
+        responder = create_test_human()
+
         accepted_response = Response.objects.create(
-            human=self.responder,
+            human=responder,
             invitation=matched_invitation,
             words="Accepted response",
             status=Response.Status.ACCEPTED,
@@ -158,64 +172,62 @@ class SendResponseTests(TestCase):
         )
 
         Presence.objects.create(
-            human=self.responder,
+            human=responder,
             moment=moment,
         )
 
         another_inviter = create_test_human(
-            first_name="Another",
-            last_name="Inviter",
-            email="another-inviter@example.com",
+            email="another-inviter@test.com",
         )
 
-        another_invitation = create_invitation(
-            human=another_inviter,
+        another_invitation = Invitation.objects.create(
+            human_id=another_inviter.pk,
             gesture="Another invitation",
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(HumanHasActivePresence):
             send_response(
-                human=self.responder,
-                invitation=another_invitation,
+                human_id=responder.pk,
+                invitation_id=another_invitation.pk,
                 words="Response",
             )
 
         self.assertEqual(
-            self.responder.responses.count(),
+            responder.responses.count(),
             1,
         )
 
-    def test_send_response_raises_when_responder_has_pending_response(self):
-        invitation = create_invitation(
+    def test_send_response_raises_when_responder_has_a_pending_response(self):
+        invitation = Invitation.objects.create(
             human=self.inviter,
-            gesture="First invitation",
+            gesture="Invitation",
         )
 
+        responder = create_test_human()
+
         Response.objects.create(
-            human=self.responder,
+            human=responder,
             invitation=invitation,
             words="Pending response",
         )
 
         another_inviter = create_test_human(
-            first_name="Another",
-            last_name="Inviter",
-            email="another-inviter@example.com",
+            email="another-inviter@test.com",
         )
 
-        another_invitation = create_invitation(
+        another_invitation = Invitation.objects.create(
             human=another_inviter,
             gesture="Another invitation",
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(HumanHasPendingResponse):
             send_response(
-                human=self.responder,
-                invitation=another_invitation,
+                human_id=responder.pk,
+                invitation_id=another_invitation.pk,
                 words="Another response",
             )
 
         self.assertEqual(
-            self.responder.responses.count(),
+            responder.responses.count(),
             1,
         )
