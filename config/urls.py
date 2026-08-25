@@ -12,4 +12,8 @@ urlpatterns = [
         "api/humans/",
         include("humans.api.urls"),
     ),
+    path(
+        "api/presence/",
+        include("presence.api.urls"),
+    ),
 ]
