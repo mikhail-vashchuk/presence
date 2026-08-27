@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth.hashers import check_password, make_password
+from django.core import mail
 from django.test import TestCase
 from django.utils import timezone
 
@@ -54,7 +55,7 @@ class CreateEmailVerificationTests(TestCase):
 
 
 class StartLoginTests(TestCase):
-    def test_start_login_creates_email_verification(self):
+    def test_start_login(self):
         User.objects.create_user(
             email="human@example.com",
         )
@@ -67,12 +68,32 @@ class StartLoginTests(TestCase):
             verification.purpose,
             EmailVerification.Purpose.LOGIN,
         )
+        self.assertEqual(
+            len(mail.outbox),
+            1,
+        )
+        self.assertEqual(
+            mail.outbox[0].to,
+            ["human@example.com"],
+        )
+        self.assertEqual(
+            mail.outbox[0].subject,
+            "Mirror Presence Layer verification code",
+        )
+        self.assertRegex(
+            mail.outbox[0].body,
+            r"\b\d{6}\b",
+        )
 
     def test_start_login_raises_when_email_is_not_registered(self):
         with self.assertRaises(EmailNotRegistered):
             start_login(email="human@example.com")
 
         self.assertEqual(EmailVerification.objects.count(), 0)
+        self.assertEqual(
+            len(mail.outbox),
+            0,
+        )
 
 
 class VerifyEmailVerificationTests(TestCase):

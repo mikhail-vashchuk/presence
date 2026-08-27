@@ -5,6 +5,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.db import transaction
 from django.utils import timezone
 
+from accounts.emails import send_verification_code
 from accounts.exceptions import (
     EmailNotRegistered,
     InvalidVerificationCode,
@@ -78,7 +79,10 @@ def start_login(email):
         purpose=EmailVerification.Purpose.LOGIN,
     )
 
-    # TODO: send the verification code through the email provider.
+    send_verification_code(
+        email=email,
+        code=code,
+    )
 
     return verification
 
