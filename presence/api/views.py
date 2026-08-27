@@ -12,6 +12,8 @@ from humans.services import get_current_human
 
 from presence.api.serializers import (
     CreateInvitationSerializer,
+    CurrentPresenceSerializer,
+    InvitationSerializer,
     SendResponseSerializer,
 )
 from presence.exceptions import (
@@ -29,6 +31,10 @@ from presence.exceptions import (
     ResponseNotFound,
     ResponseNotPending,
 )
+from presence.selectors import (
+    get_current_presence_state,
+    get_open_invitations_for_human,
+)
 from presence.services import (
     accept_response,
     cancel_response,
@@ -40,8 +46,34 @@ from presence.services import (
 )
 
 
-class CreateInvitationView(APIView):
+class InvitationsView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            human = get_current_human(
+                user_id=request.user.pk,
+            )
+        except HumanNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Human does not exist",
+                }
+            ) from error
+
+        invitations = get_open_invitations_for_human(
+            human_id=human.pk,
+        )
+
+        serializer = InvitationSerializer(
+            invitations,
+            many=True,
+        )
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
 
     def post(self, request):
         serializer = CreateInvitationSerializer(
@@ -429,5 +461,34 @@ class CancelResponseView(APIView):
                 "response_id": response.pk,
                 "status": response.status,
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class CurrentPresenceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            human = get_current_human(
+                user_id=request.user.pk,
+            )
+        except HumanNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Human does not exist",
+                }
+            ) from error
+
+        current_state = get_current_presence_state(
+            human_id=human.pk,
+        )
+
+        serializer = CurrentPresenceSerializer(
+            current_state,
+        )
+
+        return Response(
+            serializer.data,
             status=status.HTTP_200_OK,
         )

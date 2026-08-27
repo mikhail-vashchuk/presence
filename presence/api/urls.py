@@ -5,7 +5,8 @@ from presence.api.views import (
     CancelResponseView,
     CloseInvitationView,
     CompleteMomentView,
-    CreateInvitationView,
+    CurrentPresenceView,
+    InvitationsView,
     RejectResponseView,
     SendResponseView,
 )
@@ -17,8 +18,8 @@ app_name = "presence_api"
 urlpatterns = [
     path(
         "invitations/",
-        CreateInvitationView.as_view(),
-        name="invitation-create",
+        InvitationsView.as_view(),
+        name="invitations",
     ),
     path(
         "invitations/<int:invitation_id>/responses/",
@@ -49,5 +50,10 @@ urlpatterns = [
         "responses/<int:response_id>/cancel/",
         CancelResponseView.as_view(),
         name="response-cancel",
+    ),
+    path(
+        "current/",
+        CurrentPresenceView.as_view(),
+        name="current",
     ),
 ]

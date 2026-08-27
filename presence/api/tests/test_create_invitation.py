@@ -23,7 +23,7 @@ class CreateInvitationAPITests(APITestCase):
         self.client.force_login(self.human.user)
 
         response = self.client.post(
-            reverse("presence_api:invitation-create"),
+            reverse("presence_api:invitations"),
             {
                 "gesture": "Invitation",
             },
@@ -50,7 +50,7 @@ class CreateInvitationAPITests(APITestCase):
 
     def test_create_invitation_requires_authentication(self):
         response = self.client.post(
-            reverse("presence_api:invitation-create"),
+            reverse("presence_api:invitations"),
             {
                 "gesture": "Invitation",
             },
@@ -69,7 +69,7 @@ class CreateInvitationAPITests(APITestCase):
         self.client.force_login(user)
 
         response = self.client.post(
-            reverse("presence_api:invitation-create"),
+            reverse("presence_api:invitations"),
             {
                 "gesture": "Invitation",
             },
@@ -89,7 +89,7 @@ class CreateInvitationAPITests(APITestCase):
         self.client.force_login(self.human.user)
 
         response = self.client.post(
-            reverse("presence_api:invitation-create"),
+            reverse("presence_api:invitations"),
             {
                 "gesture": "",
             },
@@ -109,7 +109,7 @@ class CreateInvitationAPITests(APITestCase):
         self.client.force_login(self.human.user)
 
         response = self.client.post(
-            reverse("presence_api:invitation-create"),
+            reverse("presence_api:invitations"),
             {
                 "gesture": "Another invitation",
             },
@@ -156,7 +156,7 @@ class CreateInvitationAPITests(APITestCase):
         self.client.force_login(self.human.user)
 
         response = self.client.post(
-            reverse("presence_api:invitation-create"),
+            reverse("presence_api:invitations"),
             {
                 "gesture": "Invitation",
             },
@@ -189,7 +189,7 @@ class CreateInvitationAPITests(APITestCase):
         self.client.force_login(self.human.user)
 
         response = self.client.post(
-            reverse("presence_api:invitation-create"),
+            reverse("presence_api:invitations"),
             {
                 "gesture": "Own invitation",
             },
