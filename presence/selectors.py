@@ -6,6 +6,14 @@ from presence.models import (
 
 
 def get_open_invitations_for_human(*, human_id):
+    has_active_presence = Presence.objects.filter(
+        human_id=human_id,
+        moment__ended_at__isnull=True,
+    ).exists()
+
+    if has_active_presence:
+        return Invitation.objects.none()
+
     return (
         Invitation.objects
         .filter(status=Invitation.Status.OPEN)
