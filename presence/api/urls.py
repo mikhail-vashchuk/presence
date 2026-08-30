@@ -7,6 +7,7 @@ from presence.api.views import (
     CompleteMomentView,
     CurrentPresenceView,
     InvitationsView,
+    MomentMediaAccessView,
     RejectResponseView,
     SendResponseView,
 )
@@ -35,6 +36,11 @@ urlpatterns = [
         "responses/<int:response_id>/accept/",
         AcceptResponseView.as_view(),
         name="response-accept",
+    ),
+    path(
+        "moments/<int:moment_id>/media-access/",
+        MomentMediaAccessView.as_view(),
+        name="moment-media-access",
     ),
     path(
         "moments/<int:moment_id>/complete/",

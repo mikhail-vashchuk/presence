@@ -174,3 +174,19 @@ EMAIL_USE_TLS = env.bool(
     "EMAIL_USE_TLS",
     default=True,
 )
+
+
+LIVEKIT_URL = env(
+    "LIVEKIT_URL",
+    default="",
+)
+
+LIVEKIT_API_KEY = env(
+    "LIVEKIT_API_KEY",
+    default="",
+)
+
+LIVEKIT_API_SECRET = env(
+    "LIVEKIT_API_SECRET",
+    default="",
+)

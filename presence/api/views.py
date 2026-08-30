@@ -41,6 +41,7 @@ from presence.services import (
     close_invitation,
     complete_moment,
     create_invitation,
+    create_moment_media_access,
     reject_response,
     send_response,
 )
@@ -308,6 +309,54 @@ class AcceptResponseView(APIView):
             {
                 "moment_id": moment.pk,
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class MomentMediaAccessView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, moment_id):
+        try:
+            human = get_current_human(
+                user_id=request.user.pk,
+            )
+
+            media_access = create_moment_media_access(
+                human_id=human.pk,
+                moment_id=moment_id,
+            )
+
+        except HumanNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Human does not exist",
+                }
+            ) from error
+
+        except MomentNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Moment does not exist",
+                }
+            ) from error
+
+        except NotMomentParticipant as error:
+            raise APIValidationError(
+                {
+                    "detail": "Only a moment participant can access this moment",
+                }
+            ) from error
+
+        except MomentAlreadyCompleted as error:
+            raise APIValidationError(
+                {
+                    "detail": "Moment is already completed",
+                }
+            ) from error
+
+        return Response(
+            media_access,
             status=status.HTTP_200_OK,
         )
 

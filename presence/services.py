@@ -21,6 +21,7 @@ from presence.exceptions import (
     ResponseNotFound,
     ResponseNotPending,
 )
+from presence.media import issue_media_access
 from presence.models import (
     Invitation,
     Presence,
@@ -342,3 +343,38 @@ def cancel_response(
     response.save(update_fields=["status"])
 
     return response
+
+
+def create_moment_media_access(
+        *,
+        human_id,
+        moment_id,
+):
+    try:
+        human = Human.objects.get(
+            pk=human_id,
+        )
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
+
+    try:
+        moment = Moment.objects.get(
+            pk=moment_id,
+        )
+    except Moment.DoesNotExist as error:
+        raise MomentNotFound from error
+
+    try:
+        presence = moment.presences.get(
+            human_id=human.pk,
+        )
+    except Presence.DoesNotExist as error:
+        raise NotMomentParticipant from error
+
+    if moment.ended_at is not None:
+        raise MomentAlreadyCompleted
+
+    return issue_media_access(
+        room_id=moment.media_room_id,
+        participant_identity=f"presence-{presence.pk}",
+    )
