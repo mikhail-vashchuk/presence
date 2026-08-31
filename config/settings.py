@@ -36,7 +36,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    # Mirror apps
+    # Project apps
     'accounts',
     'humans',
     'presence',
@@ -148,7 +148,7 @@ EMAIL_BACKEND = env(
 
 DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
-    default="Mirror <noreply@mirror.local>",
+    default="Presence <noreply@presence.local>",
 )
 
 EMAIL_HOST = env(

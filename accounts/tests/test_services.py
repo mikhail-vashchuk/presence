@@ -78,7 +78,7 @@ class StartLoginTests(TestCase):
         )
         self.assertEqual(
             mail.outbox[0].subject,
-            "Mirror Presence Layer verification code",
+            "Presence verification code",
         )
         self.assertRegex(
             mail.outbox[0].body,
