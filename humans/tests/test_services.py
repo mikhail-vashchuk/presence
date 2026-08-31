@@ -127,12 +127,12 @@ class VerifyRegistrationCodeTests(TestCase):
 
 class CompleteRegistrationTests(TestCase):
     def setUp(self):
-       self.verification = EmailVerification.objects.create(
-           email="human@example.com",
-           purpose=EmailVerification.Purpose.REGISTRATION,
-           code_hash=make_password("123456"),
-           expires_at=timezone.now() + timedelta(minutes=5),
-       )
+        self.verification = EmailVerification.objects.create(
+            email="human@example.com",
+            purpose=EmailVerification.Purpose.REGISTRATION,
+            code_hash=make_password("123456"),
+            expires_at=timezone.now() + timedelta(minutes=5),
+        )
 
     def test_complete_registration_creates_user_and_human(self):
         verify_registration_code(

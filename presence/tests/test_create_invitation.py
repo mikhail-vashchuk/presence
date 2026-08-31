@@ -72,7 +72,7 @@ class CreateInvitationTests(TestCase):
         )
 
         responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
 
         response = Response.objects.create(
@@ -107,7 +107,7 @@ class CreateInvitationTests(TestCase):
         human = create_test_human()
 
         another_human = create_test_human(
-            email="another-human@test.com",
+            email="another-human@example.com",
         )
 
         invitation = Invitation.objects.create(

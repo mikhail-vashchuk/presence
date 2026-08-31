@@ -15,11 +15,11 @@ from presence.services import cancel_response
 class CancelResponseTests(TestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
 
         self.responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
 
         self.invitation = Invitation.objects.create(

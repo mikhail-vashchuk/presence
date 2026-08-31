@@ -17,10 +17,10 @@ class GetOpenInvitationsForHumanTests(TestCase):
 
     def test_get_open_invitations_for_human(self):
         second_human = create_test_human(
-            email="second-human@test.com",
+            email="second-human@example.com",
         )
         third_human = create_test_human(
-            email="third-human@test.com",
+            email="third-human@example.com",
         )
 
         Invitation.objects.create(
@@ -58,10 +58,10 @@ class GetOpenInvitationsForHumanTests(TestCase):
 
     def test_get_open_invitations_for_human_when_human_has_active_moment(self):
         inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
         another_human = create_test_human(
-            email="another-human@test.com",
+            email="another-human@example.com",
         )
 
         invitation = Invitation.objects.create(

@@ -13,13 +13,13 @@ from accounts.models import EmailVerification, User
 class StartLoginAPITests(APITestCase):
     def test_start_login(self):
         User.objects.create_user(
-            email="human@test.com",
+            email="human@example.com",
         )
 
         response = self.client.post(
             reverse("accounts_api:login-start"),
             {
-                "email": "human@test.com",
+                "email": "human@example.com",
             },
             format="json",
         )
@@ -59,7 +59,7 @@ class StartLoginAPITests(APITestCase):
         response = self.client.post(
             reverse("accounts_api:login-start"),
             {
-                "email": "human@test.com",
+                "email": "human@example.com",
             },
             format="json",
         )
@@ -77,7 +77,7 @@ class StartLoginAPITests(APITestCase):
 class VerifyLoginCodeAPITests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            email="human@test.com",
+            email="human@example.com",
         )
 
         self.verification = EmailVerification.objects.create(
@@ -334,7 +334,7 @@ class VerifyLoginCodeAPITests(APITestCase):
 class LogoutAPITests(APITestCase):
     def test_logout(self):
         user = User.objects.create_user(
-            email="human@test.com",
+            email="human@example.com",
         )
         self.client.force_login(user)
 

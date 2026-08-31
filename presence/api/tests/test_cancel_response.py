@@ -16,10 +16,10 @@ from presence.models import (
 class CancelResponseAPITests(APITestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
         self.responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
         self.invitation = Invitation.objects.create(
             human=self.inviter,
@@ -81,7 +81,7 @@ class CancelResponseAPITests(APITestCase):
 
     def test_cancel_response_returns_not_found_when_user_has_no_human(self):
         user = User.objects.create_user(
-            email="user@test.com",
+            email="user@example.com",
         )
         self.client.force_login(user)
 

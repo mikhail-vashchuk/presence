@@ -25,7 +25,7 @@ from presence.services import send_response
 class SendResponseTests(TestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
 
     def test_send_response(self):
@@ -177,7 +177,7 @@ class SendResponseTests(TestCase):
         )
 
         another_inviter = create_test_human(
-            email="another-inviter@test.com",
+            email="another-inviter@example.com",
         )
 
         another_invitation = Invitation.objects.create(
@@ -212,7 +212,7 @@ class SendResponseTests(TestCase):
         )
 
         another_inviter = create_test_human(
-            email="another-inviter@test.com",
+            email="another-inviter@example.com",
         )
 
         another_invitation = Invitation.objects.create(

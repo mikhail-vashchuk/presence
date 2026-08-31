@@ -23,10 +23,10 @@ from presence.services import create_moment_media_access
 class CreateMomentMediaAccessTests(TestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
         self.responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
         self.invitation = Invitation.objects.create(
             human=self.inviter,
@@ -98,7 +98,7 @@ class CreateMomentMediaAccessTests(TestCase):
 
     def test_create_moment_media_access_raises_when_human_is_not_participant(self):
         another_human = create_test_human(
-            email="another-human@test.com",
+            email="another-human@example.com",
         )
 
         with self.assertRaises(NotMomentParticipant):

@@ -4,7 +4,7 @@ from humans.models import Human
 
 def create_test_human(
     *,
-    email="human@test.com",
+    email="human@example.com",
     first_name="My",
     last_name="Human",
 ):

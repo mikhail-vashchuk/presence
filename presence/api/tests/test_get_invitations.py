@@ -16,10 +16,10 @@ class GetInvitationsAPITests(APITestCase):
 
     def test_get_invitations(self):
         second_human = create_test_human(
-            email="second-human@test.com",
+            email="second-human@example.com",
         )
         third_human = create_test_human(
-            email="third-human@test.com",
+            email="third-human@example.com",
         )
 
         Invitation.objects.create(
@@ -97,7 +97,7 @@ class GetInvitationsAPITests(APITestCase):
 
     def test_get_invitations_returns_not_found_when_user_has_no_human(self):
         user = User.objects.create_user(
-            email="user@test.com",
+            email="user@example.com",
         )
         self.client.force_login(user)
 

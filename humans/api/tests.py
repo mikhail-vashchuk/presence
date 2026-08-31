@@ -20,7 +20,7 @@ class StartRegistrationAPITests(APITestCase):
         response = self.client.post(
             reverse("humans_api:registration-start"),
             {
-                "email": "human@test.com",
+                "email": "human@example.com",
             },
             format="json",
         )
@@ -58,13 +58,13 @@ class StartRegistrationAPITests(APITestCase):
 
     def test_start_registration_returns_bad_request_when_email_is_registered(self):
         User.objects.create_user(
-            email="human@test.com",
+            email="human@example.com",
         )
 
         response = self.client.post(
             reverse("humans_api:registration-start"),
             {
-                "email": "human@test.com",
+                "email": "human@example.com",
             },
             format="json",
         )
@@ -82,7 +82,7 @@ class StartRegistrationAPITests(APITestCase):
 class VerifyRegistrationCodeAPITests(APITestCase):
     def setUp(self):
         self.verification = EmailVerification.objects.create(
-            email="human@test.com",
+            email="human@example.com",
             purpose=EmailVerification.Purpose.REGISTRATION,
             code_hash=make_password("123456"),
             expires_at=timezone.now() + timedelta(minutes=5),
@@ -301,7 +301,7 @@ class VerifyRegistrationCodeAPITests(APITestCase):
 class CompleteRegistrationAPITests(APITestCase):
     def setUp(self):
         self.verification = EmailVerification.objects.create(
-            email="human@test.com",
+            email="human@example.com",
             purpose=EmailVerification.Purpose.REGISTRATION,
             code_hash=make_password("123456"),
             expires_at=timezone.now() + timedelta(minutes=5),
@@ -475,7 +475,7 @@ class CompleteRegistrationAPITests(APITestCase):
 class CurrentHumanAPITests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            email="human@test.com",
+            email="human@example.com",
         )
 
         self.human = Human.objects.create(
@@ -501,7 +501,7 @@ class CurrentHumanAPITests(APITestCase):
                 "id": self.human.pk,
                 "first_name": "My",
                 "last_name": "Human",
-                "email": "human@test.com",
+                "email": "human@example.com",
             },
         )
 
@@ -517,7 +517,7 @@ class CurrentHumanAPITests(APITestCase):
 
     def test_get_current_human_returns_not_found_when_user_has_no_human(self):
         user = User.objects.create_user(
-            email="user@test.com",
+            email="user@example.com",
         )
         self.client.force_login(user)
 

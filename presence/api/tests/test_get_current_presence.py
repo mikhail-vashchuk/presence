@@ -44,7 +44,7 @@ class GetCurrentPresenceAPITests(APITestCase):
         )
 
         responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
 
         pending_response = Response.objects.create(
@@ -82,7 +82,7 @@ class GetCurrentPresenceAPITests(APITestCase):
 
     def test_get_current_presence_with_pending_response(self):
         inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
 
         invitation = Invitation.objects.create(
@@ -123,7 +123,7 @@ class GetCurrentPresenceAPITests(APITestCase):
 
     def test_get_current_presence_with_active_moment(self):
         inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
 
         invitation = Invitation.objects.create(
@@ -182,7 +182,7 @@ class GetCurrentPresenceAPITests(APITestCase):
 
     def test_get_current_presence_returns_not_found_when_user_has_no_human(self):
         user = User.objects.create_user(
-            email="user@test.com",
+            email="user@example.com",
         )
         self.client.force_login(user)
 

@@ -34,10 +34,10 @@ class GetCurrentPresenceStateTests(TestCase):
         )
 
         first_responder = create_test_human(
-            email="first-responder@test.com",
+            email="first-responder@example.com",
         )
         second_responder = create_test_human(
-            email="second-responder@test.com",
+            email="second-responder@example.com",
         )
 
         older_response = Response.objects.create(
@@ -73,7 +73,7 @@ class GetCurrentPresenceStateTests(TestCase):
 
     def test_get_current_presence_state_when_human_has_pending_response(self):
         inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
 
         invitation = Invitation.objects.create(
@@ -102,7 +102,7 @@ class GetCurrentPresenceStateTests(TestCase):
 
     def test_get_current_presence_state_when_human_has_active_moment(self):
         inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
 
         invitation = Invitation.objects.create(

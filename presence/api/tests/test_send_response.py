@@ -18,10 +18,10 @@ from presence.models import (
 class SendResponseAPITests(APITestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
         self.responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
         self.invitation = Invitation.objects.create(
             human=self.inviter,
@@ -87,7 +87,7 @@ class SendResponseAPITests(APITestCase):
 
     def test_send_response_returns_not_found_when_user_has_no_human(self):
         user = User.objects.create_user(
-            email="user@test.com",
+            email="user@example.com",
         )
         self.client.force_login(user)
 
@@ -244,7 +244,7 @@ class SendResponseAPITests(APITestCase):
 
     def test_send_response_returns_bad_request_when_human_has_active_presence(self):
         another_inviter = create_test_human(
-            email="another-inviter@test.com",
+            email="another-inviter@example.com",
         )
         matched_invitation = Invitation.objects.create(
             human=another_inviter,
@@ -296,7 +296,7 @@ class SendResponseAPITests(APITestCase):
 
     def test_send_response_returns_bad_request_when_human_has_pending_response(self):
         another_inviter = create_test_human(
-            email="another-inviter@test.com",
+            email="another-inviter@example.com",
         )
         another_invitation = Invitation.objects.create(
             human=another_inviter,

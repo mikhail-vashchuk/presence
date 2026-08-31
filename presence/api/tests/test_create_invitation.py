@@ -64,7 +64,7 @@ class CreateInvitationAPITests(APITestCase):
 
     def test_create_invitation_returns_not_found_when_user_has_no_human(self):
         user = User.objects.create_user(
-            email="user@test.com",
+            email="user@example.com",
         )
         self.client.force_login(user)
 
@@ -127,7 +127,7 @@ class CreateInvitationAPITests(APITestCase):
 
     def test_create_invitation_returns_bad_request_when_human_has_active_presence(self):
         inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
         invitation = Invitation.objects.create(
             human=inviter,
@@ -174,7 +174,7 @@ class CreateInvitationAPITests(APITestCase):
 
     def test_create_invitation_returns_bad_request_when_human_has_pending_response(self):
         inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
         invitation = Invitation.objects.create(
             human=inviter,

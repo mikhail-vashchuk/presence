@@ -15,11 +15,11 @@ from presence.services import reject_response
 class RejectResponseTests(TestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
 
         self.responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
 
     def test_reject_response(self):
@@ -117,7 +117,7 @@ class RejectResponseTests(TestCase):
         )
 
         another_human = create_test_human(
-            email="another-human@test.com",
+            email="another-human@example.com",
         )
 
         with self.assertRaises(NotInvitationOwner):

@@ -21,11 +21,11 @@ from presence.services import accept_response
 class AcceptResponseTests(TestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
 
         self.responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
 
     def test_accept_response(self):
@@ -41,7 +41,7 @@ class AcceptResponseTests(TestCase):
         )
 
         another_responder = create_test_human(
-            email="another-responder@test.com",
+            email="another-responder@example.com",
         )
 
         another_response = Response.objects.create(
@@ -135,7 +135,7 @@ class AcceptResponseTests(TestCase):
         )
 
         another_human = create_test_human(
-            email="another-human@test.com",
+            email="another-human@example.com",
         )
 
         with self.assertRaises(NotInvitationOwner):

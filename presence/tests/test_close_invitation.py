@@ -15,7 +15,7 @@ from presence.services import close_invitation
 class CloseInvitationTests(TestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
         self.invitation = Invitation.objects.create(
             human=self.inviter,
@@ -24,7 +24,7 @@ class CloseInvitationTests(TestCase):
 
     def test_close_invitation(self):
         responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
         response = Response.objects.create(
             human=responder,
@@ -51,13 +51,13 @@ class CloseInvitationTests(TestCase):
 
     def test_close_invitation_closes_all_pending_responses(self):
         responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
         another_responder = create_test_human(
-            email="another_responder@test.com",
+            email="another_responder@example.com",
         )
         third_responder = create_test_human(
-            email="third-responder@test.com"
+            email="third-responder@example.com"
         )
 
         response = Response.objects.create(
@@ -101,7 +101,7 @@ class CloseInvitationTests(TestCase):
 
     def test_close_invitation_raises_when_human_not_found(self):
         responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
         response = Response.objects.create(
             human=responder,
@@ -136,7 +136,7 @@ class CloseInvitationTests(TestCase):
 
     def test_close_invitation_raises_when_human_not_invitation_owner(self):
         responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
         response = Response.objects.create(
             human=responder,
@@ -164,7 +164,7 @@ class CloseInvitationTests(TestCase):
 
     def test_close_invitation_raises_when_invitation_is_not_open(self):
         responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
         response = Response.objects.create(
             human=responder,

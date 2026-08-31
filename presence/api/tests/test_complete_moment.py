@@ -19,10 +19,10 @@ from presence.models import (
 class CompleteMomentAPITests(APITestCase):
     def setUp(self):
         self.inviter = create_test_human(
-            email="inviter@test.com",
+            email="inviter@example.com",
         )
         self.responder = create_test_human(
-            email="responder@test.com",
+            email="responder@example.com",
         )
         invitation = Invitation.objects.create(
             human=self.inviter,
@@ -94,7 +94,7 @@ class CompleteMomentAPITests(APITestCase):
 
     def test_complete_moment_returns_not_found_when_user_has_no_human(self):
         user = User.objects.create_user(
-            email="user@test.com",
+            email="user@example.com",
         )
         self.client.force_login(user)
 
@@ -141,7 +141,7 @@ class CompleteMomentAPITests(APITestCase):
 
     def test_complete_moment_returns_bad_request_when_human_is_not_participant(self):
         human = create_test_human(
-            email="other-human@test.com",
+            email="other-human@example.com",
         )
         self.client.force_login(human.user)
 
