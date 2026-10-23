@@ -1,5 +1,7 @@
 # Presence
 
+[![CI](https://github.com/mikhail-vashchuk/presence/actions/workflows/ci.yml/badge.svg)](https://github.com/mikhail-vashchuk/presence/actions/workflows/ci.yml)
+
 **A Django backend for a private online meeting between two people.**
 
 ## How the meeting works
