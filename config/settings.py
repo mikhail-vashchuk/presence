@@ -191,3 +191,14 @@ LIVEKIT_API_SECRET = env(
     "LIVEKIT_API_SECRET",
     default="",
 )
+
+
+ASSISTANT_AGENT_NAME = env(
+    "ASSISTANT_AGENT_NAME",
+    default="presence-assistant",
+)
+
+ASSISTANT_SERVICE_TOKEN = env(
+    "ASSISTANT_SERVICE_TOKEN",
+    default="",
+)

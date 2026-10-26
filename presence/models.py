@@ -117,6 +117,7 @@ class Presence(models.Model):
         on_delete=models.PROTECT,
         related_name="presences",
     )
+    agent_consent = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -128,3 +129,62 @@ class Presence(models.Model):
 
     def __str__(self):
         return f"{self.human} in Moment #{self.moment.pk}"
+
+
+
+class AssistantHint(models.Model):
+    class Kind(models.TextChoices):
+        SILENCE = "silence", "Silence"
+        BALANCE = "balance", "Balance"
+
+    moment = models.ForeignKey(
+        Moment,
+        on_delete=models.PROTECT,
+        related_name="assistant_hints",
+    )
+    kind = models.CharField(
+        max_length=10,
+        choices=Kind.choices,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    dismissed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return f"{self.kind} hint in Moment #{self.moment_id}"
+
+
+class AssistantFeedback(models.Model):
+    class Rating(models.TextChoices):
+        HELPFUL = "helpful", "Helpful"
+        NEUTRAL = "neutral", "Neutral"
+        UNHELPFUL = "unhelpful", "Unhelpful"
+
+    moment = models.ForeignKey(
+        Moment,
+        on_delete=models.PROTECT,
+        related_name="assistant_feedback",
+    )
+    human = models.ForeignKey(
+        "humans.Human",
+        on_delete=models.PROTECT,
+        related_name="assistant_feedback",
+    )
+    rating = models.CharField(
+        max_length=10,
+        choices=Rating.choices,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["moment", "human"],
+                name="unique_assistant_feedback_per_moment_and_human",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.rating} feedback in Moment #{self.moment_id}"

@@ -37,6 +37,10 @@ def get_current_presence_state(*, human_id):
         return {
             "state": "moment",
             "moment": presence.moment,
+            "assistant": get_assistant_state(
+                moment=presence.moment,
+                human_id=human_id,
+            ),
         }
 
     invitation = (
@@ -80,4 +84,25 @@ def get_current_presence_state(*, human_id):
 
     return {
         "state": "idle",
+    }
+
+
+def get_assistant_state(*, moment, human_id):
+    presences = list(moment.presences.all())
+
+    own_consent = any(
+        presence.agent_consent
+        for presence in presences
+        if presence.human_id == human_id
+    )
+    other_consent = any(
+        presence.agent_consent
+        for presence in presences
+        if presence.human_id != human_id
+    )
+
+    return {
+        "consent": own_consent,
+        "invited": other_consent and not own_consent,
+        "active": own_consent and other_consent,
     }

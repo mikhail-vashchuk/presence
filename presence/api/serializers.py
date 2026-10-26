@@ -1,6 +1,8 @@
 from rest_framework import serializers
 
 from presence.models import (
+    AssistantFeedback,
+    AssistantHint,
     Invitation,
     Moment,
     Response,
@@ -13,6 +15,22 @@ class CreateInvitationSerializer(serializers.Serializer):
 
 class SendResponseSerializer(serializers.Serializer):
     words = serializers.CharField()
+
+
+class AgentConsentSerializer(serializers.Serializer):
+    consent = serializers.BooleanField()
+
+
+class AssistantFeedbackSerializer(serializers.Serializer):
+    rating = serializers.ChoiceField(
+        choices=AssistantFeedback.Rating.choices,
+    )
+
+
+class RecordAssistantHintSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(
+        choices=AssistantHint.Kind.choices,
+    )
 
 
 class InvitationSerializer(serializers.ModelSerializer):
@@ -42,6 +60,12 @@ class MomentSerializer(serializers.ModelSerializer):
         ]
 
 
+class AssistantStateSerializer(serializers.Serializer):
+    consent = serializers.BooleanField()
+    invited = serializers.BooleanField()
+    active = serializers.BooleanField()
+
+
 class CurrentPresenceSerializer(serializers.Serializer):
     state = serializers.ChoiceField(
         choices=[
@@ -66,5 +90,9 @@ class CurrentPresenceSerializer(serializers.Serializer):
     )
 
     moment = MomentSerializer(
+        required=False,
+    )
+
+    assistant = AssistantStateSerializer(
         required=False,
     )

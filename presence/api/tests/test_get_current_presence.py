@@ -167,6 +167,11 @@ class GetCurrentPresenceAPITests(APITestCase):
                     "id": moment.pk,
                     "media_room_id": "test-media-room-id",
                 },
+                "assistant": {
+                    "consent": False,
+                    "invited": False,
+                    "active": False,
+                },
             },
         )
 

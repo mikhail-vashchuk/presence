@@ -10,13 +10,20 @@ from rest_framework.views import APIView
 from humans.exceptions import HumanNotFound
 from humans.services import get_current_human
 
+from presence.api.permissions import HasAssistantServiceToken
 from presence.api.serializers import (
+    AgentConsentSerializer,
+    AssistantFeedbackSerializer,
     CreateInvitationSerializer,
     CurrentPresenceSerializer,
     InvitationSerializer,
+    RecordAssistantHintSerializer,
     SendResponseSerializer,
 )
 from presence.exceptions import (
+    AssistantFeedbackAlreadySent,
+    AssistantHintNotFound,
+    AssistantNotActive,
     CannotRespondToOwnInvitation,
     HumanHasActivePresence,
     HumanHasOpenInvitation,
@@ -25,6 +32,7 @@ from presence.exceptions import (
     InvitationNotOpen,
     MomentAlreadyCompleted,
     MomentNotFound,
+    NoAssistantHints,
     NotInvitationOwner,
     NotMomentParticipant,
     NotResponseAuthor,
@@ -42,8 +50,13 @@ from presence.services import (
     complete_moment,
     create_invitation,
     create_moment_media_access,
+    dismiss_assistant_hint,
+    get_assistant_session,
+    record_assistant_hint,
     reject_response,
+    send_assistant_feedback,
     send_response,
+    set_agent_consent,
 )
 
 
@@ -540,4 +553,242 @@ class CurrentPresenceView(APIView):
         return Response(
             serializer.data,
             status=status.HTTP_200_OK,
+        )
+
+
+
+class AgentConsentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, moment_id):
+        serializer = AgentConsentSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            human = get_current_human(
+                user_id=request.user.pk,
+            )
+
+            assistant_state = set_agent_consent(
+                human_id=human.pk,
+                moment_id=moment_id,
+                consent=serializer.validated_data["consent"],
+            )
+
+        except HumanNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Human does not exist",
+                }
+            ) from error
+
+        except MomentNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Moment does not exist",
+                }
+            ) from error
+
+        except NotMomentParticipant as error:
+            raise APIValidationError(
+                {
+                    "detail": "Only a moment participant can set agent consent",
+                }
+            ) from error
+
+        except MomentAlreadyCompleted as error:
+            raise APIValidationError(
+                {
+                    "detail": "Moment is already completed",
+                }
+            ) from error
+
+        return Response(
+            assistant_state,
+            status=status.HTTP_200_OK,
+        )
+
+
+class DismissAssistantHintView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, hint_id):
+        try:
+            human = get_current_human(
+                user_id=request.user.pk,
+            )
+
+            hint = dismiss_assistant_hint(
+                human_id=human.pk,
+                hint_id=hint_id,
+            )
+
+        except HumanNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Human does not exist",
+                }
+            ) from error
+
+        except AssistantHintNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Assistant hint does not exist",
+                }
+            ) from error
+
+        except NotMomentParticipant as error:
+            raise APIValidationError(
+                {
+                    "detail": "Only a moment participant can dismiss this hint",
+                }
+            ) from error
+
+        except MomentAlreadyCompleted as error:
+            raise APIValidationError(
+                {
+                    "detail": "Moment is already completed",
+                }
+            ) from error
+
+        return Response(
+            {
+                "hint_id": hint.pk,
+                "dismissed_at": hint.dismissed_at,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class AssistantFeedbackView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, moment_id):
+        serializer = AssistantFeedbackSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            human = get_current_human(
+                user_id=request.user.pk,
+            )
+
+            feedback = send_assistant_feedback(
+                human_id=human.pk,
+                moment_id=moment_id,
+                rating=serializer.validated_data["rating"],
+            )
+
+        except HumanNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Human does not exist",
+                }
+            ) from error
+
+        except MomentNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Moment does not exist",
+                }
+            ) from error
+
+        except NotMomentParticipant as error:
+            raise APIValidationError(
+                {
+                    "detail": "Only a moment participant can send feedback",
+                }
+            ) from error
+
+        except NoAssistantHints as error:
+            raise APIValidationError(
+                {
+                    "detail": "Assistant did not take part in this moment",
+                }
+            ) from error
+
+        except AssistantFeedbackAlreadySent as error:
+            raise APIValidationError(
+                {
+                    "detail": "Feedback is already sent",
+                }
+            ) from error
+
+        return Response(
+            {
+                "moment_id": feedback.moment_id,
+                "rating": feedback.rating,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AssistantSessionView(APIView):
+    authentication_classes = []
+    permission_classes = [HasAssistantServiceToken]
+
+    def get(self, request, moment_id):
+        try:
+            session = get_assistant_session(
+                moment_id=moment_id,
+            )
+
+        except MomentNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Moment does not exist",
+                }
+            ) from error
+
+        return Response(
+            session,
+            status=status.HTTP_200_OK,
+        )
+
+
+class RecordAssistantHintView(APIView):
+    authentication_classes = []
+    permission_classes = [HasAssistantServiceToken]
+
+    def post(self, request, moment_id):
+        serializer = RecordAssistantHintSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            hint = record_assistant_hint(
+                moment_id=moment_id,
+                kind=serializer.validated_data["kind"],
+            )
+
+        except MomentNotFound as error:
+            raise NotFound(
+                {
+                    "detail": "Moment does not exist",
+                }
+            ) from error
+
+        except MomentAlreadyCompleted as error:
+            raise APIValidationError(
+                {
+                    "detail": "Moment is already completed",
+                }
+            ) from error
+
+        except AssistantNotActive as error:
+            raise APIValidationError(
+                {
+                    "detail": "Assistant is not active",
+                }
+            ) from error
+
+        return Response(
+            {
+                "hint_id": hint.pk,
+            },
+            status=status.HTTP_201_CREATED,
         )

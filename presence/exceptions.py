@@ -52,3 +52,19 @@ class ResponseNotFound(PresenceError):
 
 class ResponseNotPending(PresenceError):
     pass
+
+
+class AssistantNotActive(PresenceError):
+    pass
+
+
+class AssistantHintNotFound(PresenceError):
+    pass
+
+
+class NoAssistantHints(PresenceError):
+    pass
+
+
+class AssistantFeedbackAlreadySent(PresenceError):
+    pass

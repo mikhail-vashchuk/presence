@@ -137,5 +137,10 @@ class GetCurrentPresenceStateTests(TestCase):
             {
                 "state": "moment",
                 "moment": moment,
+                "assistant": {
+                    "consent": False,
+                    "invited": False,
+                    "active": False,
+                },
             },
         )

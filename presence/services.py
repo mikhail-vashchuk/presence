@@ -7,6 +7,9 @@ from humans.exceptions import HumanNotFound
 from humans.models import Human
 
 from presence.exceptions import (
+    AssistantFeedbackAlreadySent,
+    AssistantHintNotFound,
+    AssistantNotActive,
     CannotRespondToOwnInvitation,
     InvitationNotFound,
     InvitationNotOpen,
@@ -16,18 +19,25 @@ from presence.exceptions import (
     MomentAlreadyCompleted,
     MomentNotFound,
     NotInvitationOwner,
+    NoAssistantHints,
     NotMomentParticipant,
     NotResponseAuthor,
     ResponseNotFound,
     ResponseNotPending,
 )
-from presence.media import issue_media_access
+from presence.media import (
+    dispatch_assistant,
+    issue_media_access,
+)
 from presence.models import (
+    AssistantFeedback,
+    AssistantHint,
     Invitation,
     Presence,
     Response,
     Moment,
 )
+from presence.selectors import get_assistant_state
 
 
 @transaction.atomic
@@ -378,3 +388,200 @@ def create_moment_media_access(
         room_id=moment.media_room_id,
         participant_identity=f"presence-{presence.pk}",
     )
+
+
+
+@transaction.atomic
+def set_agent_consent(
+        *,
+        human_id,
+        moment_id,
+        consent,
+):
+    try:
+        human = Human.objects.get(pk=human_id)
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
+
+    try:
+        moment = (
+            Moment.objects
+            .select_for_update()
+            .get(pk=moment_id)
+        )
+    except Moment.DoesNotExist as error:
+        raise MomentNotFound from error
+
+    try:
+        presence = moment.presences.get(
+            human_id=human.pk,
+        )
+    except Presence.DoesNotExist as error:
+        raise NotMomentParticipant from error
+
+    if moment.ended_at is not None:
+        raise MomentAlreadyCompleted
+
+    presence.agent_consent = consent
+    presence.save(update_fields=["agent_consent"])
+
+    assistant_state = get_assistant_state(
+        moment=moment,
+        human_id=human.pk,
+    )
+
+    if consent and assistant_state["active"]:
+        transaction.on_commit(
+            lambda: dispatch_assistant(
+                room_id=moment.media_room_id,
+                moment_id=moment.pk,
+            )
+        )
+
+    return assistant_state
+
+
+@transaction.atomic
+def record_assistant_hint(
+        *,
+        moment_id,
+        kind,
+):
+    try:
+        moment = (
+            Moment.objects
+            .select_for_update()
+            .get(pk=moment_id)
+        )
+    except Moment.DoesNotExist as error:
+        raise MomentNotFound from error
+
+    if moment.ended_at is not None:
+        raise MomentAlreadyCompleted
+
+    consents = list(
+        moment.presences.values_list(
+            "agent_consent",
+            flat=True,
+        )
+    )
+
+    if not consents or not all(consents):
+        raise AssistantNotActive
+
+    return AssistantHint.objects.create(
+        moment=moment,
+        kind=kind,
+    )
+
+
+@transaction.atomic
+def dismiss_assistant_hint(
+        *,
+        human_id,
+        hint_id,
+):
+    try:
+        human = Human.objects.get(pk=human_id)
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
+
+    try:
+        hint = (
+            AssistantHint.objects
+            .select_for_update()
+            .select_related("moment")
+            .get(pk=hint_id)
+        )
+    except AssistantHint.DoesNotExist as error:
+        raise AssistantHintNotFound from error
+
+    if not hint.moment.presences.filter(
+            human_id=human.pk,
+    ).exists():
+        raise NotMomentParticipant
+
+    if hint.moment.ended_at is not None:
+        raise MomentAlreadyCompleted
+
+    if hint.dismissed_at is None:
+        hint.dismissed_at = timezone.now()
+        hint.save(update_fields=["dismissed_at"])
+
+    return hint
+
+
+@transaction.atomic
+def send_assistant_feedback(
+        *,
+        human_id,
+        moment_id,
+        rating,
+):
+    try:
+        human = Human.objects.get(pk=human_id)
+    except Human.DoesNotExist as error:
+        raise HumanNotFound from error
+
+    try:
+        moment = (
+            Moment.objects
+            .select_for_update()
+            .get(pk=moment_id)
+        )
+    except Moment.DoesNotExist as error:
+        raise MomentNotFound from error
+
+    if not moment.presences.filter(
+            human_id=human.pk,
+    ).exists():
+        raise NotMomentParticipant
+
+    if not moment.assistant_hints.exists():
+        raise NoAssistantHints
+
+    if moment.assistant_feedback.filter(
+            human_id=human.pk,
+    ).exists():
+        raise AssistantFeedbackAlreadySent
+
+    return AssistantFeedback.objects.create(
+        moment=moment,
+        human=human,
+        rating=rating,
+    )
+
+
+def get_assistant_session(*, moment_id):
+    try:
+        moment = (
+            Moment.objects
+            .select_related(
+                "accepted_response__invitation",
+            )
+            .get(pk=moment_id)
+        )
+    except Moment.DoesNotExist as error:
+        raise MomentNotFound from error
+
+    consents = list(
+        moment.presences.values_list(
+            "agent_consent",
+            flat=True,
+        )
+    )
+
+    return {
+        "active": (
+            moment.ended_at is None
+            and bool(consents)
+            and all(consents)
+        ),
+        "gesture": moment.accepted_response.invitation.gesture,
+        "words": moment.accepted_response.words,
+        "dismissed_hint_ids": list(
+            moment.assistant_hints
+            .filter(dismissed_at__isnull=False)
+            .values_list("pk", flat=True)
+        ),
+    }
