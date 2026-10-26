@@ -112,3 +112,25 @@ Add these to `.env` (it is git-ignored; `.env.example` lists every variable):
 - `ANTHROPIC_API_KEY`: from the [Anthropic Console](https://console.anthropic.com/).
 - `DEEPGRAM_API_KEY`: from the [Deepgram Console](https://console.deepgram.com/).
 - The LiveKit variables already used for video rooms.
+
+### Trying the assistant without a client
+
+`scripts/demo_moment.py` plays a Moment between two simulated people who speak scripted lines, and prints the hint the assistant sends. It needs the backend and the assistant running; the demo thresholds make the assistant speak after seconds instead of minutes.
+
+```bash
+python manage.py migrate
+python manage.py runserver
+```
+
+```bash
+ASSISTANT_POLL_INTERVAL=1 ASSISTANT_STARTUP_GRACE=5 \
+ASSISTANT_SILENCE_AFTER=10 ASSISTANT_BALANCE_MIN_SPEECH=40 \
+python -m assistant.agent dev
+```
+
+```bash
+python -m scripts.demo_moment                      # the conversation falls silent
+python -m scripts.demo_moment --scenario balance   # one person does all the talking
+```
+
+The script writes to the development database and completes the Moment when it finishes.
