@@ -1,5 +1,11 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 @dataclass(frozen=True)
@@ -20,6 +26,9 @@ class Settings:
 
     @classmethod
     def from_env(cls):
+        # Variables already set in the shell win over the file.
+        load_dotenv(ENV_FILE)
+
         return cls(
             backend_url=os.environ["ASSISTANT_BACKEND_URL"].rstrip("/"),
             service_token=os.environ["ASSISTANT_SERVICE_TOKEN"],

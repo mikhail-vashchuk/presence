@@ -2,3 +2,4 @@ livekit-agents==1.8.9
 livekit-plugins-deepgram==1.8.9
 anthropic==2.3.0
 httpx==0.28.1
+python-dotenv==1.2.4
