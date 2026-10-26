@@ -33,6 +33,7 @@ import django  # noqa: E402
 django.setup()
 
 from livekit import rtc  # noqa: E402
+from livekit.agents.utils import http_context  # noqa: E402
 from livekit.plugins import deepgram  # noqa: E402
 
 from accounts.models import User  # noqa: E402
@@ -264,6 +265,12 @@ async def play(moment, humans, accesses, scenario, wait):
             await participant.room.disconnect()
 
 
+async def run(*args):
+    # The speech plugin needs an HTTP session when used outside an agent worker.
+    async with http_context.open():
+        await play(*args)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument(
@@ -291,7 +298,7 @@ def main():
     }
 
     try:
-        asyncio.run(play(moment, humans, accesses, args.scenario, args.wait))
+        asyncio.run(run(moment, humans, accesses, args.scenario, args.wait))
     finally:
         complete_moment(human_id=humans["A"].pk, moment_id=moment.pk)
         say("Moment completed.")
