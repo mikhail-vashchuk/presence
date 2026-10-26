@@ -63,6 +63,8 @@ Contains the meeting logic and its four central models:
 
 Private video rooms are provided through LiveKit.
 
+With the consent of both participants, a Moment can also include a quiet assistant that offers occasional text hints when the conversation stalls. It does not record or store the conversation.
+
 ## Scope
 
 Presence is limited to this meeting flow.
@@ -94,3 +96,19 @@ python manage.py runserver
 ## Documentation
 
 The main architectural decisions are described in [`docs/architecture.md`](docs/architecture.md).
+
+## Running the assistant
+
+The assistant is a separate process.
+
+```bash
+pip install -r assistant/requirements.txt
+python -m assistant.agent dev
+```
+
+Add these to `.env` (it is git-ignored; `.env.example` lists every variable):
+
+- `ASSISTANT_SERVICE_TOKEN`: a random secret shared by Django and the assistant. Generate one with `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+- `ANTHROPIC_API_KEY`: from the [Anthropic Console](https://console.anthropic.com/).
+- `DEEPGRAM_API_KEY`: from the [Deepgram Console](https://console.deepgram.com/).
+- The LiveKit variables already used for video rooms.
