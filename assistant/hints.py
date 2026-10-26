@@ -6,6 +6,14 @@ from assistant.policy import BALANCE, SILENCE
 
 logger = logging.getLogger(__name__)
 
+# Models that can retry a declined request on another model inside the same
+# call. The smallest model has no such fallback, so it must not be asked for it.
+SERVER_SIDE_FALLBACK_PREFIXES = (
+    "claude-fable-5",
+    "claude-opus-5",
+    "claude-sonnet-5-5",
+)
+
 SKIP = "SKIP"
 MAX_HINT_CHARS = 300
 
@@ -67,6 +75,10 @@ def build_user_message(
     )
 
 
+def supports_server_side_fallback(model):
+    return model.startswith(SERVER_SIDE_FALLBACK_PREFIXES)
+
+
 class HintWriter:
     def __init__(self, *, client, model):
         self._client = client
@@ -81,12 +93,18 @@ class HintWriter:
             transcript,
             earlier_hints,
     ):
+        options = {}
+
+        if supports_server_side_fallback(self._model):
+            options = {
+                "betas": ["server-side-fallback-2026-07-01"],
+                "fallbacks": "default",
+            }
+
         try:
             response = await self._client.beta.messages.create(
                 model=self._model,
                 max_tokens=2000,
-                betas=["server-side-fallback-2026-07-01"],
-                fallbacks="default",
                 output_config={"effort": "low"},
                 system=SYSTEM_PROMPT,
                 messages=[
@@ -101,6 +119,7 @@ class HintWriter:
                         ),
                     },
                 ],
+                **options,
             )
         except Exception:
             logger.exception("Could not write a hint")

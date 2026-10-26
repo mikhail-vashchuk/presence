@@ -1,7 +1,12 @@
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
 
-from assistant.hints import SKIP, HintWriter, build_user_message
+from assistant.hints import (
+    SKIP,
+    HintWriter,
+    build_user_message,
+    supports_server_side_fallback,
+)
 from assistant.policy import BALANCE, SILENCE
 
 
@@ -75,15 +80,36 @@ class HintWriterTests(IsolatedAsyncioTestCase):
     async def test_returns_the_hint_text(self):
         client, messages = make_client(response=reply("  What changed?  "))
 
-        text = await HintWriter(client=client, model="m").write(**WRITE_ARGS)
+        text = await HintWriter(
+            client=client,
+            model="claude-opus-5-5",
+        ).write(**WRITE_ARGS)
 
         self.assertEqual(text, "What changed?")
-        self.assertEqual(messages.calls[0]["model"], "m")
+        self.assertEqual(messages.calls[0]["model"], "claude-opus-5-5")
         self.assertEqual(messages.calls[0]["fallbacks"], "default")
         self.assertEqual(
             messages.calls[0]["output_config"],
             {"effort": "low"},
         )
+
+    async def test_the_smallest_model_is_not_asked_for_a_fallback(self):
+        client, messages = make_client(response=reply("What changed?"))
+
+        text = await HintWriter(
+            client=client,
+            model="claude-haiku-5-5",
+        ).write(**WRITE_ARGS)
+
+        self.assertEqual(text, "What changed?")
+        self.assertNotIn("fallbacks", messages.calls[0])
+        self.assertNotIn("betas", messages.calls[0])
+
+    def test_which_models_support_a_server_side_fallback(self):
+        self.assertTrue(supports_server_side_fallback("claude-opus-5-5"))
+        self.assertTrue(supports_server_side_fallback("claude-sonnet-5-5"))
+        self.assertTrue(supports_server_side_fallback("claude-fable-5-1"))
+        self.assertFalse(supports_server_side_fallback("claude-haiku-5-5"))
 
     async def test_skip_means_no_hint(self):
         client, _ = make_client(response=reply(SKIP))
